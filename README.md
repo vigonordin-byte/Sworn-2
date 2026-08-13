@@ -26,19 +26,27 @@ python3 -m http.server 8123
 
 ## Main app
 
-Four tabs behind one nav bar. In the design these are four separate boards; here
-the nav actually navigates.
+Four tabs behind one nav bar. In the design these are separate boards; here the
+nav actually navigates.
 
 | Tab | Contents |
 |---|---|
-| Home | Seal carousel (Bronze → Eternal), vow, metrics, protection card, "I'm tempted" |
+| Home | Tier seal over a star field, vow, protection card, two action cards, "I'm tempted" |
 | Commitments | Next lock, oath list with toggles, new/edit oath sheet |
-| Analytics | Range tabs, promises-kept chart, hour histogram, triggers |
+| Analytics | Range tabs and three expandable cards — commitment rate, hardest times, temptations resisted |
 | Settings | Account, the oath, preferences, support |
 
-"I'm tempted" starts a 60-second intervention that moves through four phases —
-breathe, your commitment, your reason (or scripture when Faith mode is on), and
-choose an action — then asks whether you resisted.
+Three screens sit on top rather than in the nav:
+
+- **Achievements** — full-screen, from the trophy in the home header. A timeline
+  of all five tiers (Bronze → Eternal) with the current one marked `NOW`.
+- **My why** — bottom sheet, from the home action card.
+- **Intervention** — from "I'm tempted". A 60-second countdown through four
+  phases: breathe, your commitment, your reason (or scripture when Faith mode is
+  on), and choose an action. Then it asks whether you resisted.
+
+The type is the system stack (`-apple-system` / SF Pro), not a web font — the
+design dropped Archivo and Instrument Serif.
 
 ## Onboarding flow
 
@@ -68,10 +76,13 @@ The paywall's CTA restarts the flow at step 0.
 ## Notes on the port
 
 - **Placeholder data.** The analysis score (`SCORE = 64`, `AVERAGE = 40` in
-  `app.js`) and the main app's metrics (`PROMISES_KEPT`, `HOME_METRICS`,
-  `CHART_DATA`, `HOUR_DATA`, `TRIGGERS` in `home.js`) are fixed, exactly as in
-  the design. Nothing yet derives them from real activity, and the analytics
-  hero figures do not change with the selected range.
+  `app.js`) and the main app's numbers (`STATS`, `PROTECTION`, `CHART_DATA`,
+  `HOUR_DATA`, `WEEKDAYS` in `home.js`) are fixed, exactly as in the design.
+  Nothing yet derives them from real activity, and the analytics headline
+  figures do not change with the selected range.
+- **The vow is a constant.** `VOW` in `home.js` is the same string on the home
+  screen, in the My why sheet, and in the intervention's third phase. It is not
+  captured anywhere in onboarding.
 - **Fills the screen on a phone.** The design is a desktop preview: a 393×852
   frame with a drawn bezel. Above 520px that is preserved; at or below it the
   bezel is dropped and the app fills the viewport, otherwise the fixed 852px
