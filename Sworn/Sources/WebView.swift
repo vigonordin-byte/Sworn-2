@@ -1,6 +1,7 @@
 import SwiftUI
 import WebKit
 import StoreKit
+import UserNotifications
 
 /// Hosts the bundled web UI and bridges it to Screen Time.
 ///
@@ -158,6 +159,12 @@ struct WebView: UIViewRepresentable {
                     self.app.replayOnboarding()
                     Shared.wipeAll()
                 #endif
+
+                case "notify":
+                    // The real permission prompt; iOS shows it once. There is
+                    // nothing scheduled yet — this only secures the right to.
+                    _ = try? await UNUserNotificationCenter.current()
+                        .requestAuthorization(options: [.alert, .badge, .sound])
 
                 case "review":
                     Self.requestReview()

@@ -394,6 +394,34 @@ function endUrge() {
   saveUrge(urge);
 }
 
+/* Apple's picker returns opaque tokens, so counts are all the UI may know.
+   A category like "Social" covers many apps but counts as one item — label it
+   as a category rather than pretending it is a single app. */
+function selectionTotal(bd) {
+  return bd ? (bd.apps || 0) + (bd.categories || 0) + (bd.domains || 0) : 0;
+}
+
+/** "1 category · 2 apps" — empty string when nothing is picked. */
+function selectionLabel(bd) {
+  if (!bd) return '';
+  const parts = [];
+  if (bd.categories) parts.push(bd.categories + (bd.categories === 1 ? ' category' : ' categories'));
+  if (bd.apps) parts.push(bd.apps + (bd.apps === 1 ? ' app' : ' apps'));
+  if (bd.domains) parts.push(bd.domains + (bd.domains === 1 ? ' website' : ' websites'));
+  return parts.join(' · ');
+}
+
+/** The unit under a big count. Mixed picks fall back to "blocked". */
+function selectionCaption(bd) {
+  const total = selectionTotal(bd);
+  if (!bd || !total) return 'apps';
+  const kinds = ['apps', 'categories', 'domains'].filter((k) => bd[k]);
+  if (kinds.length > 1) return 'blocked';
+  if (kinds[0] === 'categories') return total === 1 ? 'category' : 'categories';
+  if (kinds[0] === 'domains') return total === 1 ? 'website' : 'websites';
+  return total === 1 ? 'app' : 'apps';
+}
+
 /** "22:41" — when the shield lifts. */
 function urgeUntilLabel() {
   const until = loadUrge().until;

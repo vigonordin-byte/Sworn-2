@@ -78,14 +78,21 @@ enum Shared {
         return try? JSONDecoder().decode(FamilyActivitySelection.self, from: data)
     }
 
-    /// Every stored selection, counted. Keyed by oath id — deliberately not
-    /// limited to synced oaths, because onboarding picks apps before any sync
-    /// has run, and its row must still be able to say "3 apps".
-    static func allSelectionCounts() -> [String: Int] {
-        var out: [String: Int] = [:]
+    /// Every stored selection, broken down by kind. Keyed by oath id —
+    /// deliberately not limited to synced oaths, because onboarding picks apps
+    /// before any sync has run, and its row must still be able to label them.
+    /// The kinds stay separate so the UI can say "1 category" for a Social
+    /// pick instead of the misleading "1 app".
+    static func allSelectionCounts() -> [String: [String: Int]] {
+        var out: [String: [String: Int]] = [:]
         for key in defaults.dictionaryRepresentation().keys where key.hasPrefix("selection.") {
-            guard let id = Int(key.dropFirst("selection.".count)) else { continue }
-            out["\(id)"] = selectionCount(for: id)
+            guard let id = Int(key.dropFirst("selection.".count)),
+                  let s = selection(for: id) else { continue }
+            out["\(id)"] = [
+                "apps": s.applicationTokens.count,
+                "categories": s.categoryTokens.count,
+                "domains": s.webDomainTokens.count
+            ]
         }
         return out
     }

@@ -61,11 +61,11 @@ final class ScreenTime: ObservableObject {
     /// Called after a pick so the web layer can relabel the row.
     var onCountsChanged: (() -> Void)?
 
-    /// oath id → number of apps/categories/domains covered. Reads the stored
-    /// selections directly: during onboarding nothing has synced yet, and a
-    /// version keyed off `oaths` reported an empty dict forever — the picker
-    /// row stayed at "None yet" no matter what was chosen.
-    func selectionCounts() -> [String: Int] {
+    /// oath id → counts per kind. Reads the stored selections directly:
+    /// during onboarding nothing has synced yet, and a version keyed off
+    /// `oaths` reported an empty dict forever — the picker row stayed at
+    /// "None yet" no matter what was chosen.
+    func selectionCounts() -> [String: [String: Int]] {
         Shared.allSelectionCounts()
     }
 

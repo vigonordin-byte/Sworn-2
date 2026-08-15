@@ -244,9 +244,14 @@ window.sworn = {
 };
 
 /** How many things an oath actually blocks. */
+function shieldBreakdown(oath) {
+  if (!oath) return null;
+  return NATIVE ? (shieldCounts[oath.id] || null) : { apps: oath.apps.length };
+}
+
 function shieldCount(oath) {
   if (!oath) return 0;
-  return NATIVE ? (shieldCounts[oath.id] || 0) : oath.apps.length;
+  return NATIVE ? selectionTotal(shieldCounts[oath.id]) : oath.apps.length;
 }
 
 /** Hand the device the current schedule. Every change routes through here. */
@@ -299,7 +304,7 @@ function protectionCard() {
           <span style="display:flex;align-items:center;gap:10px;flex:0 0 auto">
             <span style="display:block;text-align:right">
               <span class="prot__left" style="display:block">${shieldCount(lock)}</span>
-              <span style="display:block;margin-top:4px;font-size:13px;font-weight:400;color:rgba(235,235,245,.5)">${shieldCount(lock) === 1 ? 'app' : 'apps'}</span>
+              <span style="display:block;margin-top:4px;font-size:13px;font-weight:400;color:rgba(235,235,245,.5)">${esc(selectionCaption(shieldBreakdown(lock)))}</span>
             </span>
             <span class="chev">›</span>
           </span>
@@ -749,7 +754,7 @@ function commitmentsTab() {
         <div class="nextlock__foot">
           ${svg(MOON, 22, DIM)}
           <div>
-            <div style="font-size:13.5px;font-weight:600">${lock ? `${shieldCount(lock)} app${shieldCount(lock) === 1 ? ' locks' : 's lock'} at this time` : 'Nothing is locked'}</div>
+            <div style="font-size:13.5px;font-weight:600">${lock ? `${esc(selectionLabel(shieldBreakdown(lock)) || 'Nothing')} lock${shieldCount(lock) === 1 ? 's' : ''} at this time` : 'Nothing is locked'}</div>
             <div style="margin-top:3px;font-size:12.5px;color:rgba(242,240,236,.45)">${lock ? esc(NATIVE ? `Locked until ${lock.until}` : (lock.apps.join(' · ') || 'No apps chosen')) : 'Turn an oath on to protect your apps'}</div>
           </div>
         </div>
@@ -836,7 +841,7 @@ function oathSheet() {
       ${NATIVE ? `
       <button type="button" class="tile tile--row" style="margin-top:11px" data-act="pick-apps" data-id="${d.id === null ? '' : d.id}">
         <span class="row__left">${svg(LOCK, 19, DIM)}<span style="font-weight:600">App blocking</span></span>
-        <span class="tile__value">${countLabel(shieldCount(d))}<span class="tile__chev">›</span></span>
+        <span class="tile__value">${shieldCount(d) ? esc(selectionLabel(shieldBreakdown(d))) : 'None yet'}<span class="tile__chev">›</span></span>
       </button>
       ${d.id === null ? '<div class="tile-note">Swear the oath first, then choose which apps it locks.</div>' : ''}
       ` : `
@@ -909,7 +914,7 @@ function settingsTab() {
 
       <div class="group-label">THE OATH</div>
       <div class="group">
-        ${settingsRow(LOCK, 'Apps under oath', countLabel(oathAppCount()), 'apps-under-oath')}
+        ${settingsRow(LOCK, 'Apps under oath', oathAppCount() + ' blocked', 'apps-under-oath')}
         ${settingsRow(MOON, 'Default locked window', `${win.from} – ${win.to}`, 'window-open')}
       </div>
 

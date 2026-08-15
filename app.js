@@ -43,21 +43,7 @@ const SLIDE_TINTS = [
 const quoteDefs = () => [
   ['Andrew Huberman, Ph.D.', 'Drastically improve your life', 'Resetting your dopamine balance by taking a break from highly stimulating content can dramatically improve motivation, emotional stability, and everyday pleasure.'],
   B().quote,
-  ['Connor', 'Quitting changed my mindset', 'Quitting has allowed me to change my mindset on the way I see myself, and the people around me.']
-];
-
-const REVIEW_DEFS = [
-  ['Daniel', 'D', 'Sworn has been a lifesaver. The interventions actually work.'],
-  ['Chris', 'C', 'Grounded in science and nothing like the other apps I tried.'],
-  ['Lucas', 'L', 'Love the streak tracking and the oath card.'],
-  ['Marcus', 'M', 'Eleven days sworn and the friction settings keep me honest.']
-];
-
-const PLAN_DAY_DEFS = [
-  ['Day 0 – Prepare your space', 'Shape your physical, digital, and social environment to make change easier'],
-  ['Day 1 – Outsmart withdrawal', 'Use quick mental and physical tools to ride out urges and reset focus.'],
-  ['Day 5 – Feel better in your body', 'Move, eat clean, and recharge. Your energy and clarity return fast.'],
-  ["Day 6 – You're not alone", 'Connect with others on the same path. Share wins, get support.']
+  ['1 Corinthians 10:13', 'God gives a way out', 'God is faithful, who will not allow you to be tempted above what you are able, but will with the temptation also make the way of escape.']
 ];
 
 const PLAN_DEFS = [
@@ -119,11 +105,10 @@ const PROTECT = 34;
 
 const BENEFITS = 35;
 const PATH = 36;
-const RATING = 37;
-const REFERRAL = 38;
-const NOTIFY = 39;
-const READY = 40;
-const PAYWALL = 41;
+const REFERRAL = 37;
+const NOTIFY = 38;
+const READY = 39;
+const PAYWALL = 40;
 
 // ---------------------------------------------------------------- native bridge
 
@@ -141,12 +126,14 @@ const native = (msg) => window.webkit?.messageHandlers?.sworn?.postMessage(msg);
 
 /** Onboarding seeds oath 1, so that is what the picker writes against. */
 const ONBOARDING_OATH_ID = 1;
+let shieldSel = null;
 let shieldCount = 0;
 
 window.sworn = {
   onAuth() { /* nothing to redraw here */ },
   onCounts(counts) {
-    shieldCount = (counts && counts[ONBOARDING_OATH_ID]) || 0;
+    shieldSel = (counts && counts[ONBOARDING_OATH_ID]) || null;
+    shieldCount = selectionTotal(shieldSel);
     render();
   }
 };
@@ -204,6 +191,7 @@ function go(step) {
   clearInterval(timer);
   S.step = step;
   render();
+  if (step === PATH) armPath();
 }
 
 /* End of the flow. In the app this hands over to sign-in and then home; in a
@@ -660,7 +648,7 @@ function protectScreen() {
   const ready = (NATIVE ? shieldCount > 0 : p.apps.length > 0) && p.days.length > 0;
   const sec = S.protSection;
   const appsLabel = NATIVE
-    ? (shieldCount ? shieldCount + (shieldCount === 1 ? ' app' : ' apps') : 'None yet')
+    ? (shieldCount ? selectionLabel(shieldSel) : 'None yet')
     : (p.apps.length ? p.apps.length + (p.apps.length === 1 ? ' app' : ' apps') : 'None yet');
 
   const row = (label, value, section, act) => `
@@ -733,7 +721,6 @@ function benefits() {
       <div class="scroll" style="top:54px;bottom:98px">
         ${quoteDefs().map(([name, head, body]) => `
           <div class="quote-head">
-            <div class="avatar"></div>
             <div style="font-size:16px;font-weight:700">${esc(name)}</div>
             ${SPARKLE}
           </div>
@@ -760,10 +747,10 @@ function path() {
       <div class="serif" style="margin-top:12px;font-size:20px;color:rgba(242,240,236,.55)">With Sworn, recovery is possible</div>
       <div style="margin-top:34px">
         <svg width="100%" height="190" viewBox="0 0 340 190" fill="none">
-          <path d="M6 150 C50 146 60 120 96 118 C132 116 150 96 186 88 C222 80 250 44 334 24" stroke="#e7bc6a" stroke-width="4" stroke-linecap="round"/>
-          <path d="M6 150 C50 146 60 158 96 160 C132 162 150 138 186 142 C222 146 250 130 334 178" stroke="#8f8f96" stroke-width="3.4" stroke-linecap="round"/>
-          <circle cx="334" cy="24" r="8" fill="#f4e6c8" stroke="#0a0a0b" stroke-width="3"/>
-          <g stroke="#8f8f96" stroke-width="3" stroke-linecap="round">
+          <path class="path-draw" pathLength="1" d="M6 150 C50 146 60 120 96 118 C132 116 150 96 186 88 C222 80 250 44 334 24" stroke="#e7bc6a" stroke-width="4" stroke-linecap="round"/>
+          <path class="path-draw" pathLength="1" d="M6 150 C50 146 60 158 96 160 C132 162 150 138 186 142 C222 146 250 130 334 178" stroke="#8f8f96" stroke-width="3.4" stroke-linecap="round"/>
+          <circle class="path-pop" cx="334" cy="24" r="8" fill="#f4e6c8" stroke="#0a0a0b" stroke-width="3"/>
+          <g class="path-pop" stroke="#8f8f96" stroke-width="3" stroke-linecap="round">
             <path d="M76 152l12 12M88 152l-12 12"/>
             <path d="M156 132l12 12M168 132l-12 12"/>
             <path d="M246 130l12 12M258 130l-12 12"/>
@@ -775,30 +762,17 @@ function path() {
         <span class="dim"><span class="swatch" style="background:#8f8f96"></span>Without</span>
         <span class="dim">✕ Setbacks</span>
       </div>
-      <button class="cta" style="margin-top:auto" data-act="next">Continue</button>
+      <button class="cta cta--muted" style="margin-top:auto" id="pathcta" data-act="next" disabled>Continue</button>
     </div>`;
 }
 
-function rating() {
-  return `
-    <div class="screen rating anim-rise-fast">
-      ${backCircle()}
-      <div style="margin-top:16px;text-align:center;font-size:25px;font-weight:700;letter-spacing:4px">GIVE US A RATING</div>
-      <div class="stars" style="margin-top:18px">${STAR(26).repeat(5)}</div>
-      <div class="serif" style="margin-top:20px;text-align:center;font-size:20px;color:rgba(242,240,236,.6);text-wrap:pretty">This app was designed for people like you.</div>
-      <div class="reviews">
-        ${REVIEW_DEFS.map(([name, initial, text]) => `
-          <div class="review">
-            <div style="display:flex;align-items:center;gap:9px">
-              <div class="review__initial">${esc(initial)}</div>
-              <div style="font-size:13px;font-weight:700">${esc(name)}</div>
-            </div>
-            <div style="margin-top:7px;font-size:11px;letter-spacing:1px;color:#e7bc6a">★★★★★</div>
-            <div style="margin-top:8px;font-size:12.5px;line-height:1.4;color:rgba(242,240,236,.55)">${esc(text)}</div>
-          </div>`).join('')}
-      </div>
-      <button class="cta" style="margin-top:auto" data-act="next">Next</button>
-    </div>`;
+/* The continue button unlocks once the lines have finished drawing. A patch
+   rather than a re-render, so the animation is not restarted. */
+function armPath() {
+  timer = setTimeout(() => {
+    const cta = document.getElementById('pathcta');
+    if (cta) { cta.disabled = false; cta.classList.remove('cta--muted'); }
+  }, 2000);
 }
 
 function referral() {
@@ -819,7 +793,7 @@ function notify() {
       <div style="margin-top:120px">${BELL}</div>
       <div style="margin-top:40px;text-align:center;font-size:25px;font-weight:700;letter-spacing:3.8px;line-height:1.2">STAY ON TRACK WITH REMINDERS</div>
       <div class="serif" style="margin-top:18px;text-align:center;font-size:20px;line-height:1.4;color:rgba(242,240,236,.55);text-wrap:pretty">${esc(B().notifyLine)}</div>
-      <button class="cta cta--glow" style="margin-top:auto;letter-spacing:2.4px" data-act="next">Enable notifications</button>
+      <button class="cta cta--glow" style="margin-top:auto;letter-spacing:2.4px" data-act="notify-on">Enable notifications</button>
       <button type="button" class="notlater" data-act="next">Not now</button>
     </div>`;
 }
@@ -838,29 +812,28 @@ function planReady() {
     </div>`;
 }
 
+const PAYWALL_POINTS = [
+  'Real app blocking during your riskiest hours',
+  'A 60 second intervention when you are tempted',
+  'Your own commitment, read back when it matters'
+];
+
 function paywall() {
   return `
-    <div class="screen paywall anim-rise-fast">
-      <div class="scroll" style="top:0;bottom:calc(342px + var(--safe-bottom))">
-        <div style="text-align:center;font-size:15px;font-weight:700;letter-spacing:6px">SWORN</div>
-        <div style="margin-top:26px;text-align:center;font-size:23px;font-weight:700;letter-spacing:3px;line-height:1.2">IT'S NOT ABOUT WILLPOWER</div>
-        <div class="serif" style="margin-top:12px;text-align:center;font-size:21px;color:rgba(242,240,236,.62)">It's about a system that actually works</div>
-        <div style="margin-top:22px;font-size:14px;line-height:1.55;color:rgba(242,240,236,.6);text-wrap:pretty">Sworn guides you through a powerful 30 day reset, providing structure and tools that support your growth even beyond the break.</div>
-        <div style="margin-top:16px;font-size:14px;font-weight:600">Here's what your first 7 days looks like:</div>
-        <div style="margin-top:14px;display:flex;flex-direction:column;gap:12px">
-          ${PLAN_DAY_DEFS.map(([title, body]) => `
-            <div class="planday">
-              <div style="font-size:15px;font-weight:700">${esc(title)}</div>
-              <div style="margin-top:7px;font-size:13.5px;line-height:1.45;color:rgba(242,240,236,.55);text-wrap:pretty">${esc(body)}</div>
-            </div>`).join('')}
-        </div>
-        <div style="height:20px"></div>
+    <div class="screen paywall anim-rise-fast" style="display:flex;flex-direction:column;padding:0 24px calc(16px + var(--safe-bottom));overflow:hidden">
+      <div style="text-align:center;font-size:15px;font-weight:700;letter-spacing:6px">SWORN</div>
+      <div style="margin-top:30px;text-align:center;font-size:24px;font-weight:700;letter-spacing:3px;line-height:1.2">IT'S NOT ABOUT WILLPOWER</div>
+      <div class="serif" style="margin-top:12px;text-align:center;font-size:21px;color:rgba(242,240,236,.62)">It's about a system that actually works</div>
+
+      <div style="margin-top:30px;display:flex;flex-direction:column;gap:14px">
+        ${PAYWALL_POINTS.map((point) => `
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="flex:0 0 auto;color:#e7bc6a;font-size:15px;font-weight:700">✓</span>
+            <span style="font-size:14.5px;line-height:1.4;color:rgba(242,240,236,.75)">${esc(point)}</span>
+          </div>`).join('')}
       </div>
 
-      <div class="sheet">
-        <div style="text-align:center;font-size:19px;font-weight:700;letter-spacing:2.4px" id="plantitle">CHOOSE YOUR PLAN</div>
-        <div class="sale"><span>60% Off Sale</span><span>9 spots remaining</span></div>
-        <div role="radiogroup" aria-labelledby="plantitle">
+      <div role="radiogroup" aria-label="Choose your plan" style="margin-top:auto">
         ${PLAN_DEFS.map(([name, price, note], i) => `
           <button type="button" class="plan${on(S.plan === i)}" data-act="plan" data-i="${i}"
             role="radio" aria-checked="${S.plan === i}">
@@ -873,14 +846,12 @@ function paywall() {
               <span style="display:block" class="plan__note">${esc(note)}</span>
             </span>
           </button>`).join('')}
-        </div>
-        <div style="margin-top:12px;text-align:center;font-size:12.5px;color:#6d675e">No commitment, cancel anytime</div>
-        <button class="cta cta--dark" style="margin-top:12px" data-act="finish">Start my journey</button>
       </div>
+
+      <div style="margin-top:14px;text-align:center;font-size:12.5px;color:rgba(242,240,236,.4)">No commitment, cancel anytime</div>
+      <button class="cta cta--glow" style="margin-top:12px" data-act="finish">Start my journey</button>
     </div>`;
 }
-
-// ---------------------------------------------------------------- render
 
 function screenHtml() {
   const step = S.step;
@@ -906,7 +877,6 @@ function screenHtml() {
     case PROTECT: return protectScreen();
     case BENEFITS: return benefits();
     case PATH: return path();
-    case RATING: return rating();
     case REFERRAL: return referral();
     case NOTIFY: return notify();
     case READY: return planReady();
@@ -944,10 +914,20 @@ document.getElementById('phone').addEventListener('click', (e) => {
   const i = Number(el.dataset.i);
 
   switch (el.dataset.act) {
-    case 'back': return go(Math.max(0, S.step - 1));
+    case 'back': {
+      // The calculating screen is a one-way transition; going back from the
+      // analysis must land on the quiz's last screen, not inside it.
+      const target = S.step - 1 === CALCULATING ? FINALLY : S.step - 1;
+      return go(Math.max(0, target));
+    }
     case 'skip': return go(FINALLY);
     case 'next': return next();
     case 'finish': return finishOnboarding();
+    case 'notify-on':
+      // The real system prompt. iOS shows it over the app; either answer,
+      // onboarding moves on.
+      if (NATIVE) native({ action: 'notify' });
+      return next();
     case 'restart': return go(0);
     case 'option': return pickOption(i);
     case 'age': S.age = AGE_OPTS[i]; return render();
