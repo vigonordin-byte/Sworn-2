@@ -59,8 +59,16 @@ const BEHAVIOR_CONFIG = {
       ['IT IS A DRUG', "Every time releases dopamine. That is why it feels good, and why the brain keeps asking for it.", '💊'],
       ['IT CROWDS OUT REAL LIFE', 'It reduces your appetite for a real relationship and replaces it with an appetite for more of itself.', '♥'],
       ['IT DULLS DESIRE', 'More than half of heavy users report losing interest in real intimacy and an overall drop in drive.', '⚥'],
-      ['FEELING FLAT?', 'A raised dopamine baseline means you need more just to feel normal. That is why heavy use so often comes with low mood and low motivation.', '◔'],
-      ['IT REVERSES', 'Given time away from it, the brain resets its sensitivity. Energy, focus and interest come back.', '❦']
+      ['FEELING FLAT?', 'A raised dopamine baseline means you need more just to feel normal. That is why heavy use so often comes with low mood and low motivation.', '🪫'],
+      ['IT REVERSES', 'Given time away from it, the brain resets its sensitivity. Energy, focus and interest come back.', '🌱']
+    ],
+
+    /* Index 0 must stay 'Come closer to God' in every behaviour — faith mode
+       is inferred from goal 0, and stored picks are indices into this list. */
+    goals: [
+      'Come closer to God', 'Improved self-control', 'Stronger relationships',
+      'Improved mood and happiness', 'More energy and motivation',
+      'Improved focus and clarity', 'Pure and healthy mind'
     ],
 
     reasons: [
@@ -170,11 +178,17 @@ const BEHAVIOR_CONFIG = {
     ],
 
     slides: [
-      ['THE NEAR MISS IS THE HOOK', 'Almost winning lights up the brain almost as much as winning. That is designed, not accidental.', '◉'],
-      ['CHASING IS THE TRAP', 'The urge to win it back is the strongest pull there is, and it is exactly how a bad day becomes a bad year.', '♢'],
-      ['THE ODDS DO NOT MOVE', 'No streak, system or hunch changes the maths. The house edge is the whole business model.', '⚂'],
-      ['FEELING FLAT?', 'Raised dopamine means normal life feels dull by comparison. That is why heavy betting so often comes with low mood.', '◔'],
-      ['IT REVERSES', 'Time away lets the reward system settle. Money, sleep and clarity come back together.', '❦']
+      ['THE NEAR MISS IS THE HOOK', 'Almost winning lights up the brain almost as much as winning. That is designed, not accidental.', '🎰'],
+      ['CHASING IS THE TRAP', 'The urge to win it back is the strongest pull there is, and it is exactly how a bad day becomes a bad year.', '🪤'],
+      ['THE ODDS DO NOT MOVE', 'No streak, system or hunch changes the maths. The house edge is the whole business model.', '🎲'],
+      ['FEELING FLAT?', 'Raised dopamine means normal life feels dull by comparison. That is why heavy betting so often comes with low mood.', '🪫'],
+      ['IT REVERSES', 'Time away lets the reward system settle. Money, sleep and clarity come back together.', '🌱']
+    ],
+
+    goals: [
+      'Come closer to God', 'Improved self-control', 'Stronger relationships',
+      'Improved mood and happiness', 'More energy and motivation',
+      'Saving money and financial control', 'Pure and healthy mind'
     ],
 
     reasons: [
@@ -269,11 +283,17 @@ const BEHAVIOR_CONFIG = {
     ],
 
     slides: [
-      ['THE FEED IS DESIGNED', 'Infinite scroll has no stopping cue on purpose. You are not weak-willed. You are up against a system built to hold you.', '◉'],
-      ['IT COSTS YOUR FOCUS', 'Every switch has a re-entry cost. An hour broken into fragments is not an hour of attention.', '◑'],
-      ['COMPARISON IS THE PRODUCT', 'You are comparing your ordinary day to everyone else’s highlights, thousands of times a week.', '⚖'],
-      ['FEELING FLAT?', 'Constant novelty raises the bar for what feels interesting. That is why everything slower starts to feel boring.', '◔'],
-      ['IT REVERSES', 'Attention rebuilds. Give it a few uninterrupted days and reading, working and being present all get easier.', '❦']
+      ['THE FEED IS DESIGNED', 'Infinite scroll has no stopping cue on purpose. You are not weak-willed. You are up against a system built to hold you.', '📱'],
+      ['IT COSTS YOUR FOCUS', 'Every switch has a re-entry cost. An hour broken into fragments is not an hour of attention.', '🧠'],
+      ['COMPARISON IS THE PRODUCT', 'You are comparing your ordinary day to everyone else’s highlights, thousands of times a week.', '⚖️'],
+      ['FEELING FLAT?', 'Constant novelty raises the bar for what feels interesting. That is why everything slower starts to feel boring.', '🪫'],
+      ['IT REVERSES', 'Attention rebuilds. Give it a few uninterrupted days and reading, working and being present all get easier.', '🌱']
+    ],
+
+    goals: [
+      'Come closer to God', 'Improved self-control', 'Stronger relationships',
+      'Improved mood and happiness', 'More energy and motivation',
+      'Improved focus and clarity', 'Being present in my own life'
     ],
 
     reasons: [

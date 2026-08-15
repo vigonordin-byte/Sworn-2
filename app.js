@@ -12,15 +12,6 @@ const AGE_OPTS = ['18–24', '25–34', '35–44', '45+'];
 const CALC_NOTES = ['Understanding responses', 'Weighing your triggers', 'Shaping your oath'];
 
 
-const GOAL_DEFS = [
-  'Come closer to God', 'Improved self-control', 'Stronger relationships',
-  'Improved mood and happiness', 'More energy and motivation',
-  'Improved focus and clarity', 'Pure and healthy mind'
-];
-
-/* The design had six competing tints. One neutral reads as a set. */
-const GOAL_TINTS = new Array(7).fill('rgba(255,255,255,.10)');
-
 
 const FEATURE_SLIDES = [
   ['WELCOME TO SWORN', "Sworn blocks the apps you choose, at the times you choose, with Apple's own Screen Time system. When temptation hits, it stands between you and the app.", '✦'],
@@ -32,7 +23,16 @@ const FEATURE_SLIDES = [
 ];
 
 /* Glyphs whose meaning is carried by their colour. */
-const GLYPH_COLOR = { '♥': '#ff453a', '⬡': '#30d158', '⛨': '#ff453a', '✦': '#ffd60a' };
+const GLYPH_COLOR = {
+  '♥': '#ff453a',   // red heart: what gets crowded out
+  '⚥': '#e07ab8',   // desire
+  '⬡': '#30d158',   // rewiring, growth green
+  '⛨': '#ff453a',   // setbacks, warning red
+  '✦': '#ffd60a',   // the welcome star
+  '☀': '#ffd60a',   // motivation
+  '☖': '#cfd6de',   // conquering yourself, silver
+  '❖': '#e7bc6a'    // levelling up, gold
+};
 
 const SLIDE_TINTS = [
   'rgba(217,164,65,.22)', 'rgba(200,120,110,.2)', 'rgba(170,130,200,.2)',
@@ -461,7 +461,7 @@ function goals() {
       </div>
       <div class="scroll" style="top:172px;bottom:98px">
         <div style="display:flex;flex-direction:column;gap:11px" role="group" aria-label="Goals to track">
-          ${GOAL_DEFS.map((label, i) => {
+          ${B().goals.map((label, i) => {
             const sel = S.goals.includes(i);
             return `
             <button type="button" class="goal${on(sel)}" data-act="goal" data-i="${i}" aria-pressed="${sel}">
