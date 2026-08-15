@@ -54,6 +54,7 @@ targets:
       base:
         PRODUCT_NAME: Sworn
         PRODUCT_BUNDLE_IDENTIFIER: com.vigonordin.sworn2app
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MARKETING_VERSION: "0.1"
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1"
