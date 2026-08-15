@@ -134,6 +134,29 @@ commitment", rather than just collecting settings:
 Step 30 is the real question: do they want this enough to accept the friction?
 Accepting sets `committed` on the record.
 
+## The 60 seconds
+
+The core accountability moment. It appears when the user tries to disable an
+active commitment (a bypass) or asks for it themselves from "I'm tempted".
+
+One continuous screen. The countdown is a thin depleting ring; only the body
+under it changes, on a slow cross-fade:
+
+| Elapsed | Stage | Content |
+|---|---|---|
+| 0–10s | Interrupt | **WAIT.** · "You made a commitment to yourself." |
+| 10–30s | Remember | "Remember why you started" · their own words. Faith mode adds a verse *underneath*, never in place of it |
+| 30–50s | Act | "Don't sit here fighting the urge" · one physical instruction |
+| 50–60s | Decide | "The urge will pass." · "What do you want to choose?" |
+
+There is **no button on screen at all** until the clock reaches zero — no close,
+no back, no navigation. At zero the decision appears: **Go Back** (primary) and
+**Continue Anyway** (secondary). Only then can the protection actually come off.
+
+Turning an oath *on* is instant. Turning one *off* goes through the full sixty
+seconds, and the oath stays armed the entire time — nothing changes unless
+Continue Anyway is pressed at the end.
+
 ## Where the answers get used
 
 Onboarding answers are deliberately *not* used everywhere. They appear at four

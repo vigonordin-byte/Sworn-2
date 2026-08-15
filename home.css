@@ -1283,3 +1283,171 @@ body { font-family: var(--sf); }
   font-size: 14px;
   cursor: pointer;
 }
+
+/* ---------------------------------------------------------------- the 60 seconds
+
+   The defining screen. One surface, four stages, no way out until the clock is
+   spent. Restraint is the whole point — nothing here competes with the count. */
+
+.iv {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: #050506;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: max(96px, calc(40px + var(--safe-top))) 32px max(40px, var(--safe-bottom));
+}
+
+/* clock */
+
+.iv__clock {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  flex: 0 0 150px;
+}
+
+.iv__ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+
+.iv__track {
+  fill: none;
+  stroke: rgba(255, 255, 255, .07);
+  stroke-width: 1.5;
+}
+
+.iv__fill {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear;
+}
+
+.iv__count {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 46px;
+  font-weight: 300;
+  letter-spacing: -1.5px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* stage body — the only thing that changes */
+
+.iv__stage {
+  margin-top: 54px;
+  width: 100%;
+  text-align: center;
+  animation: ivIn .9s ease both;
+}
+.iv__stage.is-in { animation: ivIn .9s ease both; }
+
+@keyframes ivIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.iv__wait {
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: 8px;
+  text-indent: 8px;
+}
+
+.iv__line {
+  margin-top: 20px;
+  font-size: 17px;
+  line-height: 1.5;
+  color: rgba(242, 240, 236, .6);
+  text-wrap: pretty;
+}
+
+.iv__lead {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  color: rgba(242, 240, 236, .42);
+}
+
+.iv__quote {
+  margin-top: 22px;
+  font-size: 25px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: -.3px;
+  color: var(--cream);
+  text-wrap: pretty;
+}
+
+.iv__verse {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: .5px solid rgba(255, 255, 255, .1);
+}
+.iv__verse-text { font-size: 15px; line-height: 1.5; color: rgba(242, 240, 236, .5); text-wrap: pretty; }
+.iv__verse-ref { margin-top: 8px; font-size: 11.5px; letter-spacing: 1.6px; color: rgba(242, 240, 236, .32); }
+
+.iv__action {
+  margin-top: 22px;
+  font-size: 34px;
+  font-weight: 500;
+  letter-spacing: -.6px;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.iv__decide {
+  font-size: 25px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: -.3px;
+  color: var(--ink);
+}
+.iv__decide--soft { margin-top: 14px; color: rgba(242, 240, 236, .45); }
+
+/* decision — revealed only at zero */
+
+.iv__foot { margin-top: auto; width: 100%; }
+
+.iv__decision {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: ivIn .7s ease both;
+}
+
+.iv__primary {
+  width: 100%;
+  padding: 19px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--ink);
+  color: #0a0a0b;
+  font-family: var(--sf);
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.iv__secondary {
+  width: 100%;
+  padding: 17px;
+  border: 0;
+  border-radius: 16px;
+  background: none;
+  color: rgba(242, 240, 236, .45);
+  font-family: var(--sf);
+  font-size: 15px;
+  font-weight: 400;
+  cursor: pointer;
+}
+.iv__secondary:hover { color: rgba(242, 240, 236, .7); }
+.iv__secondary--quiet { font-size: 14px; color: rgba(242, 240, 236, .32); }

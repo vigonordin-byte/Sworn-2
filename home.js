@@ -81,7 +81,10 @@ const S = {
   daysSworn: 11,
   interventionSeconds: 60,
   faith: false,
-  view: 'home',        // home | protected | running | done | lapse
+  view: 'home',        // home | protected | running | lapse
+  ivMode: null,        // 'voluntary' | 'bypass'
+  ivOathId: null,
+  ivAction: '',
   left: 60,
   range: '30D',
   draft: null,         // the oath being created/edited, or null
@@ -471,22 +474,79 @@ function achievements() {
 // ---------------------------------------------------------------- intervention
 
 /** Which of the four intervention phases the countdown is in. */
-function phase() {
-  const t = S.interventionSeconds;
-  const elapsed = t - S.left;
-  if (elapsed < t * 0.17) return ['BREATHE', 'Put the phone down. Ten slow breaths, nothing else.'];
-  if (elapsed < t * 0.5) return ['YOUR COMMITMENT', 'You said you wouldn’t open Reddit after 8 PM. That was you, deciding.'];
-  if (elapsed < t * 0.83) {
-    return S.faith
-      ? ['YOUR FAITH', '“Flee from sexual immorality.” — 1 Corinthians 6:18']
-      : ['YOUR REASON', '“' + whyText() + '”'];
-  }
-  return ['CHOOSE AN ACTION', 'Stand up. Leave the room. Get a glass of water.'];
+/* The 60-second intervention.
+   One continuous screen. The content moves through four stages while the
+   countdown runs; nothing is a separate page, and there is no way out of it
+   until the clock reaches zero. */
+
+const PHYSICAL_ACTIONS = [
+  'Stand up.',
+  'Get a glass of water.',
+  'Put your phone down.',
+  'Leave the room.'
+];
+
+const FAITH_VERSE = ['“Flee from sexual immorality.”', '1 Corinthians 6:18'];
+
+/** Which stage the clock is in. Boundaries are seconds, not fractions. */
+function stageFor(elapsed) {
+  if (elapsed < 10) return 'interrupt';
+  if (elapsed < 30) return 'remember';
+  if (elapsed < 50) return 'act';
+  return 'decide';
 }
+
+/** The stage body. Rendered only when the stage changes, so it can fade. */
+function stageBody(stage) {
+  switch (stage) {
+    case 'interrupt':
+      return `
+        <div class="iv__wait">WAIT.</div>
+        <div class="iv__line">You made a commitment to yourself.</div>`;
+
+    case 'remember':
+      return `
+        <div class="iv__lead">Remember why you started.</div>
+        <div class="iv__quote">“${esc(whyText())}”</div>
+        ${S.faith ? `
+        <div class="iv__verse">
+          <div class="iv__verse-text">${FAITH_VERSE[0]}</div>
+          <div class="iv__verse-ref">${FAITH_VERSE[1]}</div>
+        </div>` : ''}`;
+
+    case 'act':
+      return `
+        <div class="iv__lead">Don't sit here fighting the urge.</div>
+        <div class="iv__action">${esc(S.ivAction)}</div>`;
+
+    default:
+      return `
+        <div class="iv__decide">The urge will pass.</div>
+        <div class="iv__decide iv__decide--soft">What do you want to choose?</div>`;
+  }
+}
+
+/** The decision, revealed only once the countdown is spent. */
+function decisionBar() {
+  if (S.left > 0) return '';
+  if (S.ivMode === 'bypass') {
+    return `
+      <div class="iv__decision">
+        <button type="button" class="iv__primary" data-act="iv-back">Go Back</button>
+        <button type="button" class="iv__secondary" data-act="iv-continue">Continue Anyway</button>
+      </div>`;
+  }
+  return `
+    <div class="iv__decision">
+      <button type="button" class="iv__primary" data-act="iv-back">Go Back</button>
+      <button type="button" class="iv__secondary iv__secondary--quiet" data-act="lapse">I gave in</button>
+    </div>`;
+}
+
+const RING_CIRCUMFERENCE = 2 * Math.PI * 46;
 
 function intervention() {
   if (S.view === 'home') return '';
-  const t = S.interventionSeconds;
 
   /* Tapping "I'm tempted" is a success, not a confession. The first thing the
      user sees is that it worked, and that the decision is already taken. */
@@ -508,40 +568,29 @@ function intervention() {
 
   if (S.view === 'lapse') return lapseScreen();
 
-  if (S.view === 'running') {
-    const pct = ((t - S.left) / t) * 100;
-    const [label, body] = phase();
-    return `
-      <div class="intervene">
-        <div class="intervene__eyebrow">${urgeRemaining() > 0 ? `Protected until ${urgeUntilLabel()}` : 'You made a commitment'}</div>
-        <div style="margin-top:36px">
-          <div class="count" role="timer"
-            style="background:conic-gradient(#d9a441 ${pct}%, rgba(255,255,255,.07) ${pct}%)">
-            <div class="count__hole"></div>
-            <div class="count__n">${S.left}</div>
-          </div>
-        </div>
-        <div class="phase">${esc(label)}</div>
-        <div class="phase__body">${esc(body)}</div>
-        <div style="margin-top:auto;font-size:12.5px;color:rgba(242,240,236,.4);text-align:center">Don't decide now. Only get through the next ${t} seconds.</div>
-        <button type="button" style="margin-top:16px;background:none;border:0;color:rgba(242,240,236,.35);font-family:var(--sf);font-size:12px;cursor:pointer" data-act="cancel">Close</button>
-      </div>`;
-  }
+  const total = S.interventionSeconds;
+  const elapsed = total - S.left;
+  const stage = stageFor(elapsed);
+  const offset = RING_CIRCUMFERENCE * (elapsed / total);
 
-  const left = urgeRemaining();
   return `
-    <div class="intervene">
-      <div style="margin-top:120px;font-size:23px;font-weight:700;letter-spacing:4px;text-align:center;line-height:1.3">YOU GOT THROUGH IT</div>
-      <div style="margin-top:14px;font-size:13.5px;color:rgba(242,240,236,.5);text-align:center;max-width:280px;text-wrap:pretty">${left > 0
-        ? `Your apps stay blocked until ${urgeUntilLabel()}. Nothing is asked of you until then.`
-        : 'The urge passed and your commitment stands.'}</div>
-      <div style="margin-top:auto;width:100%;display:flex;flex-direction:column;gap:11px">
-        <button type="button" class="verdict verdict--gold" data-act="resisted">DONE</button>
-        <button type="button" class="verdict verdict--dark" data-act="pause">ANOTHER 60 SECONDS</button>
-        <button type="button" class="quiet" data-act="lapse">I gave in</button>
+    <div class="iv" data-stage="${stage}">
+      <div class="iv__clock">
+        <svg class="iv__ring" viewBox="0 0 100 100" aria-hidden="true">
+          <circle class="iv__track" cx="50" cy="50" r="46"></circle>
+          <circle class="iv__fill" cx="50" cy="50" r="46"
+            stroke-dasharray="${RING_CIRCUMFERENCE.toFixed(2)}"
+            stroke-dashoffset="${offset.toFixed(2)}"></circle>
+        </svg>
+        <div class="iv__count" role="timer" aria-live="off">${S.left}</div>
       </div>
+
+      <div class="iv__stage" id="ivstage">${stageBody(stage)}</div>
+
+      <div class="iv__foot" id="ivfoot">${decisionBar()}</div>
     </div>`;
 }
+
 
 /* Not a verdict. They already know what happened; this only gives them their
    own reason back and a way to start again. */
@@ -904,16 +953,31 @@ function render() {
     achievements() + whyPage();
 }
 
-/** The countdown ticks once a second — patch it rather than re-render. */
+/* The clock is patched every second; the stage body is swapped only when the
+   stage actually changes, so it can cross-fade instead of flickering. */
 function paintCount() {
-  const el = document.querySelector('.count');
-  if (!el) return;
-  const pct = ((S.interventionSeconds - S.left) / S.interventionSeconds) * 100;
-  el.style.background = `conic-gradient(#d9a441 ${pct}%, rgba(255,255,255,.07) ${pct}%)`;
-  el.querySelector('.count__n').textContent = S.left;
-  const [label, body] = phase();
-  document.querySelector('.phase').textContent = label;
-  document.querySelector('.phase__body').textContent = body;
+  const root = document.querySelector('.iv');
+  if (!root) return;
+
+  const total = S.interventionSeconds;
+  const elapsed = total - S.left;
+
+  root.querySelector('.iv__count').textContent = S.left;
+  root.querySelector('.iv__fill')
+      .setAttribute('stroke-dashoffset', (RING_CIRCUMFERENCE * (elapsed / total)).toFixed(2));
+
+  const stage = stageFor(elapsed);
+  if (stage !== root.dataset.stage) {
+    root.dataset.stage = stage;
+    const holder = document.getElementById('ivstage');
+    holder.innerHTML = stageBody(stage);
+    // restart the fade
+    holder.classList.remove('is-in');
+    void holder.offsetWidth;
+    holder.classList.add('is-in');
+  }
+
+  if (S.left <= 0) document.getElementById('ivfoot').innerHTML = decisionBar();
 }
 
 /* The urge shield goes up first — before any countdown — so protection does
@@ -927,19 +991,22 @@ function tapTempted() {
   render();
 }
 
-function startIntervention() {
+/** mode: 'voluntary' from "I'm tempted", 'bypass' when disabling protection. */
+function startIntervention(mode, oathId) {
   clearInterval(timer);
   S.tab = 'home';
   S.view = 'running';
+  S.ivMode = mode || 'voluntary';
+  S.ivOathId = oathId ?? null;
+  S.ivAction = PHYSICAL_ACTIONS[Math.floor(Math.random() * PHYSICAL_ACTIONS.length)];
   S.left = S.interventionSeconds;
   render();
+
   timer = setInterval(() => {
     S.left -= 1;
     if (S.left <= 0) {
-      clearInterval(timer);
       S.left = 0;
-      S.view = 'done';
-      return render();
+      clearInterval(timer);
     }
     paintCount();
   }, 1000);
@@ -948,7 +1015,22 @@ function startIntervention() {
 function endIntervention() {
   clearInterval(timer);
   S.view = 'home';
+  S.ivMode = null;
+  S.ivOathId = null;
   S.left = S.interventionSeconds;
+  render();
+}
+
+/** They waited it out and still want the protection gone. */
+function completeBypass() {
+  const oath = OATHS.find((o) => o.id === S.ivOathId);
+  if (oath) oath.on = false;
+  clearInterval(timer);
+  S.view = 'home';
+  S.ivMode = null;
+  S.ivOathId = null;
+  S.left = S.interventionSeconds;
+  persistOaths();
   render();
 }
 
@@ -965,7 +1047,9 @@ document.getElementById('phone').addEventListener('click', (e) => {
       S.tab = el.dataset.tab;
       return render();
     case 'tempted': return tapTempted();
-    case 'pause': return startIntervention();
+    case 'pause': return startIntervention('voluntary');
+    case 'iv-back': return endIntervention();
+    case 'iv-continue': return completeBypass();
     case 'cancel':
     case 'resisted': return endIntervention();
     case 'lapse': S.view = 'lapse'; return render();
@@ -996,7 +1080,10 @@ document.getElementById('phone').addEventListener('click', (e) => {
     }
     case 'oath-toggle': {
       const o = OATHS.find((x) => x.id === Number(el.dataset.id));
-      if (o) o.on = !o.on;
+      if (!o) return;
+      // Switching protection off is a bypass — it has to be waited out.
+      if (o.on) return startIntervention('bypass', o.id);
+      o.on = true;
       persistOaths();
       return render();
     }
