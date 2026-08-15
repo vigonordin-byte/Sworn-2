@@ -740,7 +740,7 @@ function planReady() {
 function paywall() {
   return `
     <div class="screen paywall anim-rise-fast">
-      <div class="scroll" style="top:0;bottom:342px">
+      <div class="scroll" style="top:0;bottom:calc(342px + var(--safe-bottom))">
         <div style="text-align:center;font-size:15px;font-weight:700;letter-spacing:6px">SWORN</div>
         <div style="margin-top:26px;text-align:center;font-size:23px;font-weight:700;letter-spacing:3px;line-height:1.2">IT'S NOT ABOUT WILLPOWER</div>
         <div class="serif" style="margin-top:12px;text-align:center;font-size:21px;color:rgba(242,240,236,.62)">It's about a system that actually works</div>
