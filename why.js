@@ -91,6 +91,7 @@ function loadWhy() {
   if (typeof whyCache.cost !== 'string') whyCache.cost = '';
   if (typeof whyCache.future !== 'string') whyCache.future = '';
   if (typeof whyCache.committed !== 'boolean') whyCache.committed = false;
+  if (!Array.isArray(whyCache.goals)) whyCache.goals = [];
   return whyCache;
 }
 
@@ -99,6 +100,17 @@ function setWhyField(field, value) {
   const why = loadWhy();
   why[field] = value;
   saveWhy(why);
+}
+
+/* Faith mode used to be a switch in Settings. It is now inferred: if someone
+   names religious belief as their reason, or picks "Come closer to God" as a
+   goal, scripture belongs in their intervention. Asking twice was clutter. */
+const FAITH_REASON = 0;   // 'Religious beliefs'
+const FAITH_GOAL = 0;     // 'Come closer to God'
+
+function faithMode() {
+  const why = loadWhy();
+  return why.reasons.includes(FAITH_REASON) || why.goals.includes(FAITH_GOAL);
 }
 
 /** The line to read back to them. Their why, else the cost, else the stand-in. */
@@ -303,6 +315,60 @@ function seedFirstOath(p) {
   };
   const rest = existing.filter((o) => o.id !== 1);
   saveOaths([oath, ...rest]);
+}
+
+/* The hours new oaths default to. Editable from Settings. */
+const WINDOW_KEY = 'sworn.window';
+
+function loadWindow() {
+  try {
+    const raw = localStorage.getItem(WINDOW_KEY);
+    if (raw) {
+      const w = JSON.parse(raw);
+      if (w && w.from && w.to) return { from: w.from, to: w.to };
+    }
+  } catch (e) { /* blocked */ }
+  return { from: '20:00', to: '06:00' };
+}
+
+function saveWindow(w) {
+  try { localStorage.setItem(WINDOW_KEY, JSON.stringify(w)); } catch (e) { /* blocked */ }
+}
+
+/** Everything Sworn holds, as plain text, for Export my record. */
+function exportRecord() {
+  const why = loadWhy();
+  const urge = loadUrge();
+  const oaths = loadOaths() || [];
+  const lines = [
+    'SWORN — my record',
+    new Date().toLocaleString(),
+    '',
+    'WHY',
+    why.text || '(not written)',
+    '',
+    'WHAT IT COST',
+    why.cost || '(not written)',
+    '',
+    'NINETY DAYS FROM NOW',
+    why.future || '(not written)',
+    '',
+    'REASONS',
+    ...(why.reasons.length ? why.reasons.map((i) => '- ' + WHY_REASONS[i]) : ['(none picked)']),
+    '',
+    'DAYS SWORN',
+    String(loadProgress().daysSworn),
+    '',
+    'OATHS',
+    ...(oaths.length ? oaths.map((o) => `- ${o.name} · ${o.time}-${o.until} · ${o.on ? 'on' : 'off'}`) : ['(none)']),
+    '',
+    'PROTECTION ACTIVATED',
+    String(urge.log.length) + ' time(s)',
+    '',
+    'RESTARTS',
+    ...(urge.lapses.length ? urge.lapses.map((l) => `- ${new Date(l.at).toLocaleDateString()}${l.note ? ' — ' + l.note : ''}`) : ['(none)'])
+  ];
+  return lines.join('\n');
 }
 
 // ---------------------------------------------------------------- urge shield

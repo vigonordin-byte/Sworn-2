@@ -70,7 +70,6 @@ const S = {
   tab: 'home',
   daysSworn: loadProgress().daysSworn,
   interventionSeconds: 60,
-  faith: false,
   view: 'home',        // home | protected | running | lapse
   ivMode: null,        // 'voluntary' | 'bypass'
   ivOathId: null,
@@ -84,6 +83,7 @@ const S = {
   whyEditing: false,
   achievementsOpen: false,
   devOpen: false,
+  page: null,          // 'account' | 'window' | 'support' | 'terms' | 'privacy'
   screenTimeAuthorized: false
 };
 
@@ -115,6 +115,7 @@ const STAR = '<path d="m12 4.2 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.5l-4.8 2.6.9-5.
 const DOC = '<path d="M6.5 3.8h7l4 4v12.4h-11z"/><path d="M13.5 3.8v4h4"/>';
 const PLUS = '<path d="M12 5.5v13M5.5 12h13"/>';
 const WRENCH = '<path d="M14.7 6.3a4 4 0 0 1-5.3 5.3L5 16v3h3l4.4-4.4a4 4 0 0 1 5.3-5.3l-2.3 2.3-1.4-1.4z"/>';
+const CARD = '<rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M3 10.5h18"/>';
 const REPLAY = '<path d="M3.5 12a8.5 8.5 0 1 1 2.6 6.1"/><path d="M3.5 19v-5h5"/>';
 const SHIELD_CHECK = '<path d="M12 3.2 19 6v5.8c0 4.4-2.9 7.4-7 9-4.1-1.6-7-4.6-7-9V6z"/><path d="M9 12.1l2.3 2.3 4.2-4.5"/>';
 
@@ -509,7 +510,7 @@ function stageBody(stage) {
       return `
         <div class="iv__lead">Remember why you started.</div>
         <div class="iv__quote">“${esc(whyText())}”</div>
-        ${S.faith ? `
+        ${faithMode() ? `
         <div class="iv__verse">
           <div class="iv__verse-text">${FAITH_VERSE[0]}</div>
           <div class="iv__verse-ref">${FAITH_VERSE[1]}</div>
@@ -782,7 +783,8 @@ function commitmentsTab() {
 const countLabel = (n) => n + (n === 1 ? ' app' : ' apps');
 
 function blankOath() {
-  return { id: null, name: '', time: '20:00', until: '06:00', days: [0, 1, 2, 3, 4, 5, 6], apps: [], friction: 1, on: true };
+  const w = loadWindow();
+  return { id: null, name: '', time: w.from, until: w.to, days: [0, 1, 2, 3, 4, 5, 6], apps: [], friction: 1, on: true };
 }
 
 function oathSheet() {
@@ -877,54 +879,58 @@ function oathSheet() {
 
 // ---------------------------------------------------------------- settings
 
-const settingsRow = (icon, name, value) => `
-  <button type="button" class="row">
+const settingsRow = (icon, name, value, act) => `
+  <button type="button" class="row"${act ? ` data-act="${act}"` : ''}>
     <span class="row__left">${svg(icon, 20, DIM)}<span class="row__name">${esc(name)}</span></span>
     <span class="row__value">${value ? esc(value) : ''}<span class="chev">›</span></span>
   </button>`;
 
+/** Everything under an active oath, for the "apps under oath" row. */
+function oathAppCount() {
+  if (NATIVE) return OATHS.reduce((n, o) => n + (o.on ? shieldCount(o) : 0), 0);
+  return lockedApps().length;
+}
+
 function settingsTab() {
+  const win = loadWindow();
+
   return `
     <div class="scroll" style="top:var(--safe-top);bottom:var(--nav-h);padding:0">
       <div style="padding:24px 24px 0" class="page-title">SETTINGS</div>
 
-      <button type="button" class="card account">
+      <button type="button" class="card account" data-act="account">
         <span class="account__ring">${svg(PERSON, 24, DIM)}</span>
         <span style="flex:1">
           <span class="account__tag" style="display:block">SWORN MEMBER</span>
-          <span class="account__name" style="display:block">YOUR ACCOUNT</span>
+          <span class="account__name" style="display:block">${esc((USER.name || 'Your account').toUpperCase())}</span>
         </span>
         <span class="chev">›</span>
       </button>
 
       <div class="group-label">THE OATH</div>
       <div class="group">
-        ${settingsRow(PARTNER, 'Accountability partner', 'Marcus')}
-        ${settingsRow(LOCK, 'Apps under oath', countLabel(NATIVE ? OATHS.reduce((n, o) => n + (o.on ? shieldCount(o) : 0), 0) : lockedApps().length))}
-        ${settingsRow(MOON, 'Default locked window', '20:00 – 06:00')}
-        <div class="row row--static">
-          <span class="row__left">${svg(CROSS, 20, DIM)}<span class="row__name">Faith mode</span></span>
-          <button type="button" class="switch${on(S.faith)}" data-act="faith"
-            role="switch" aria-checked="${S.faith}" aria-label="Faith mode"><i></i></button>
-        </div>
+        ${settingsRow(LOCK, 'Apps under oath', countLabel(oathAppCount()), 'apps-under-oath')}
+        ${settingsRow(MOON, 'Default locked window', `${win.from} – ${win.to}`, 'window-open')}
       </div>
 
       <div class="group-label" style="margin-top:24px">PREFERENCES</div>
       <div class="group">
         ${settingsRow(BELL, 'Notifications', 'Daily')}
-        ${settingsRow(EXPORT, 'Export my record', '')}
-        <button type="button" class="row" data-act="replay-onboarding">
-          <span class="row__left">${svg(REPLAY, 20, DIM)}<span class="row__name">Replay onboarding</span></span>
-          <span class="row__value"><span class="chev">›</span></span>
-        </button>
+        ${settingsRow(EXPORT, 'Export my record', '', 'export')}
+        ${settingsRow(REPLAY, 'Replay onboarding', '', 'replay-onboarding')}
+      </div>
+
+      <div class="group-label" style="margin-top:24px">SUBSCRIPTION</div>
+      <div class="group">
+        ${settingsRow(CARD, 'Manage subscription', '', 'subscription')}
       </div>
 
       <div class="group-label" style="margin-top:24px">SUPPORT &amp; LEGAL</div>
       <div class="group">
-        ${settingsRow(HELP, 'Support', '')}
-        ${settingsRow(STAR, 'Leave a review', '')}
-        ${settingsRow(DOC, 'Terms of service', '')}
-        ${settingsRow(LOCK, 'Privacy policy', '')}
+        ${settingsRow(HELP, 'Support', '', 'doc-support')}
+        ${settingsRow(STAR, 'Leave a review', '', 'review')}
+        ${settingsRow(DOC, 'Terms of service', '', 'doc-terms')}
+        ${settingsRow(LOCK, 'Privacy policy', '', 'doc-privacy')}
       </div>
 
       ${DEV ? `
@@ -940,8 +946,124 @@ function settingsTab() {
     </div>`;
 }
 
+/* ---- settings sub-pages --------------------------------------------------- */
+
+function pageShell(title, body) {
+  return `
+    <div class="page">
+      <div class="bd-flat"></div>
+      <div class="page__head">
+        <button type="button" class="icon-btn" style="width:34px;height:34px" data-act="page-close" aria-label="Back">
+          ${svg(CHEVRON, 22, '#fff', 1.9)}
+        </button>
+        <div class="page__title">${title}</div>
+      </div>
+      <div class="page__body">${body}<div style="height:30px"></div></div>
+    </div>`;
+}
+
+function accountPage() {
+  return pageShell('ACCOUNT', `
+    <div class="group" style="margin:0">
+      <div class="row row--static">
+        <span class="row__left"><span class="row__name">Name</span></span>
+        <span class="row__value">${esc(USER.name || 'Not set')}</span>
+      </div>
+      <div class="row row--static">
+        <span class="row__left"><span class="row__name">Signed in with</span></span>
+        <span class="row__value">Apple</span>
+      </div>
+      <div class="row row--static">
+        <span class="row__left"><span class="row__name">Days sworn</span></span>
+        <span class="row__value">${S.daysSworn}</span>
+      </div>
+    </div>
+    <div class="doc-note">Sworn stores your commitment on this device. Signing out leaves it in place.</div>
+    <button type="button" class="oath-break" data-act="sign-out">Sign out</button>`);
+}
+
+function windowPage() {
+  const win = loadWindow();
+  return pageShell('LOCKED WINDOW', `
+    <div class="doc-note" style="margin-top:0">The hours new oaths use by default. Changing it does not alter oaths you have already sworn.</div>
+    <div class="window-row" style="margin-top:18px">
+      <label class="window-cell">
+        <span class="window-cell__label">FROM</span>
+        <input type="time" class="window-time" data-field="winFrom" value="${esc(win.from)}">
+      </label>
+      <span class="window-dash">–</span>
+      <label class="window-cell">
+        <span class="window-cell__label">TO</span>
+        <input type="time" class="window-time" data-field="winTo" value="${esc(win.to)}">
+      </label>
+    </div>`);
+}
+
+const DOCS = {
+  support: ['SUPPORT', `
+    <p>Sworn is made by a very small team. If something is broken, or the app is not doing what you expected, write to us and a person will read it.</p>
+    <p class="doc-strong">hello@sworn.app</p>
+    <p>Include what you were doing and what happened. If it is about blocking, say which apps and which hours — that is almost always where the answer is.</p>
+    <h3>Blocking is not working</h3>
+    <p>Sworn blocks apps using Apple's Screen Time. Two things have to be true: you granted Screen Time access when asked, and the oath has apps chosen and is switched on. You can check both under Commitments.</p>
+    <p>If you denied Screen Time access, iOS will not ask again. Turn it back on in Settings → Screen Time.</p>
+    <h3>I want my data removed</h3>
+    <p>Everything Sworn knows is on your device. Deleting the app deletes it. There is nothing on a server for us to remove.</p>
+  `],
+
+  terms: ['TERMS OF SERVICE', `
+    <p class="doc-meta">Last updated 15 August 2026</p>
+    <p>By using Sworn you agree to these terms. They are deliberately short.</p>
+    <h3>What Sworn is</h3>
+    <p>Sworn helps you keep commitments you make to yourself. It can block apps during hours you choose, and it asks you to wait before those protections come off.</p>
+    <h3>What Sworn is not</h3>
+    <p>Sworn is not medical care, therapy, or treatment for addiction. It does not diagnose anything. The figures it shows you are indications, not clinical results. If you are struggling, please speak to a doctor or a qualified professional.</p>
+    <h3>Your account</h3>
+    <p>You sign in with Apple. You are responsible for keeping access to that Apple ID. You must be old enough to enter a contract where you live.</p>
+    <h3>Subscriptions</h3>
+    <p>Paid plans are billed through your Apple ID and renew automatically unless cancelled at least 24 hours before the period ends. Manage or cancel in Settings → Manage subscription, or in your Apple ID settings. Refunds are handled by Apple, not by us.</p>
+    <h3>Blocking has limits</h3>
+    <p>Sworn uses Apple's Screen Time. It can be turned off in iOS Settings, and it cannot cover every app or every route to content. Sworn adds friction; it does not make anything impossible. Do not rely on it as your only safeguard.</p>
+    <h3>Ending it</h3>
+    <p>You can stop using Sworn at any time by deleting the app. We may suspend accounts that abuse the service. Sworn is provided as it is, without warranties, and our liability is limited to what you paid us in the previous twelve months.</p>
+  `],
+
+  privacy: ['PRIVACY POLICY', `
+    <p class="doc-meta">Last updated 15 August 2026</p>
+    <p>Sworn is built so that we do not need your data. Almost nothing leaves your phone.</p>
+    <h3>Stays on your device</h3>
+    <p>Your reason for stopping, what it has cost you, your oaths, hours, streak, and every note you write after a lapse are stored only on this device. We cannot read them.</p>
+    <h3>Which apps you block</h3>
+    <p>Apps are chosen through Apple's own picker. Apple hands Sworn an opaque token, not a name. Sworn can count how many apps you protect, and genuinely cannot tell which they are.</p>
+    <h3>Sign in with Apple</h3>
+    <p>We receive an identifier for your account, and your first name if you choose to share it. Apple lets you hide your email; if you do, we never see the real one. The name is stored on your device so the app can greet you.</p>
+    <h3>Payments</h3>
+    <p>Subscriptions are handled entirely by Apple. We never see your card.</p>
+    <h3>What we do not do</h3>
+    <p>No advertising. No analytics SDKs. No selling or sharing of anything. No profile built about you.</p>
+    <h3>Deleting it</h3>
+    <p>Delete the app and the data goes with it. To sever the Apple sign-in, use Settings → Apple ID → Sign in with Apple. Questions: hello@sworn.app.</p>
+  `]
+};
+
+function docPage(kind) {
+  const [title, body] = DOCS[kind];
+  return pageShell(title, `<div class="doc">${body}</div>`);
+}
+
 /* DEBUG only. Drives the same stores the real app reads — picking a state
    takes you into the genuine screens, not a mock of them. */
+function settingsPage() {
+  switch (S.page) {
+    case 'account': return accountPage();
+    case 'window': return windowPage();
+    case 'support': return docPage('support');
+    case 'terms': return docPage('terms');
+    case 'privacy': return docPage('privacy');
+    default: return '';
+  }
+}
+
 function devPage() {
   if (!DEV || !S.devOpen) return '';
   const secs = SwornDev.duration();
@@ -1026,7 +1148,7 @@ function render() {
   document.getElementById('layer').innerHTML =
     (S.tab === 'home' ? intervention() : '') +
     oathSheet() +
-    achievements() + whyPage() + devPage();
+    achievements() + whyPage() + devPage() + settingsPage();
 }
 
 /* The clock is patched every second; the stage body is swapped only when the
@@ -1217,7 +1339,23 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'day': toggle(S.draft.days, i); return render();
     case 'app': toggle(S.draft.apps, el.dataset.app); return render();
     case 'friction': S.draft.friction = i; return render();
-    case 'faith': S.faith = !S.faith; return render();
+    case 'page-close': S.page = null; return render();
+    case 'account': S.page = 'account'; return render();
+    case 'window-open': S.page = 'window'; return render();
+    case 'doc-support': S.page = 'support'; return render();
+    case 'doc-terms': S.page = 'terms'; return render();
+    case 'doc-privacy': S.page = 'privacy'; return render();
+    case 'review': return native({ action: 'review' });
+    case 'subscription': return native({ action: 'manageSubscription' });
+    case 'export': return native({ action: 'export', text: exportRecord() });
+    case 'sign-out': S.page = null; return native({ action: 'signOut' });
+    case 'apps-under-oath': {
+      const target = OATHS.find((o) => o.on) || OATHS[0];
+      if (!target) { S.tab = 'commitments'; return render(); }
+      if (NATIVE) return native({ action: 'pick', oathId: target.id });
+      S.tab = 'commitments';
+      return render();
+    }
     case 'dev-open': S.devOpen = true; return render();
     case 'dev-close': S.devOpen = false; return render();
     case 'dev-state': return SwornDev.apply(el.dataset.id);
@@ -1247,6 +1385,12 @@ document.getElementById('phone').addEventListener('input', (e) => {
     return;
   }
 
+  if (field === 'winFrom' || field === 'winTo') {
+    const w = loadWindow();
+    w[field === 'winFrom' ? 'from' : 'to'] = e.target.value;
+    saveWindow(w);
+    return;
+  }
   if (field === 'time' || field === 'until') {
     S.draft[field] = e.target.value;
     const label = document.querySelector(`[data-section="${field}"] .tile__val`);

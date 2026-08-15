@@ -854,7 +854,10 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'option': return pickOption(i);
     case 'age': S.age = AGE_OPTS[i]; return render();
     case 'symptom': return toggle(S.symptoms, el.dataset.key);
-    case 'goal': return toggle(S.goals, i);
+    case 'goal':
+      toggle(S.goals, i);
+      setWhyField('goals', S.goals.slice());
+      return render();
     case 'reason': toggleWhyReason(i); return render();
     case 'commit': setWhyField('committed', true); return next();
     case 'protect-day': {

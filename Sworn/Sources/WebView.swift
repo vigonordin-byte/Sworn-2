@@ -1,5 +1,6 @@
 import SwiftUI
 import WebKit
+import StoreKit
 
 /// Hosts the bundled web UI and bridges it to Screen Time.
 ///
@@ -11,8 +12,13 @@ struct WebView: UIViewRepresentable {
     /// Absent during onboarding — nobody has signed in yet.
     let session: AppleAuth.Session?
     let app: AppState
+    var onSignOut: (() -> Void)? = nil
 
-    func makeCoordinator() -> Bridge { Bridge(screenTime: screenTime, app: app) }
+    func makeCoordinator() -> Bridge {
+        let bridge = Bridge(screenTime: screenTime, app: app)
+        bridge.onSignOut = onSignOut
+        return bridge
+    }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -148,6 +154,18 @@ struct WebView: UIViewRepresentable {
                     Shared.wipeAll()
                 #endif
 
+                case "review":
+                    Self.requestReview()
+
+                case "manageSubscription":
+                    await Self.manageSubscription()
+
+                case "export":
+                    Self.share(text: body["text"] as? String ?? "")
+
+                case "signOut":
+                    self.onSignOut?()
+
                 case "forget":
                     if let id = body["oathId"] as? Int { self.screenTime.forget(oathId: id) }
 
@@ -155,6 +173,52 @@ struct WebView: UIViewRepresentable {
                     break
                 }
             }
+        }
+
+        /// Set by ContentView so the web layer can sign the user out.
+        var onSignOut: (() -> Void)?
+
+        // MARK: system sheets
+
+        /// Apple's own rating prompt. iOS decides whether to actually show it,
+        /// and rate-limits it — that is expected, not a failure.
+        @MainActor
+        private static func requestReview() {
+            guard let scene = activeScene() else { return }
+            AppStore.requestReview(in: scene)
+        }
+
+        @MainActor
+        private static func manageSubscription() async {
+            guard let scene = activeScene() else { return }
+            do {
+                try await AppStore.showManageSubscriptions(in: scene)
+            } catch {
+                // No subscription yet, or the sheet is unavailable — fall back
+                // to the account page in the App Store.
+                if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                    await UIApplication.shared.open(url)
+                }
+            }
+        }
+
+        @MainActor
+        private static func share(text: String) {
+            guard !text.isEmpty, let root = activeScene()?.keyWindow?.rootViewController else { return }
+            let sheet = UIActivityViewController(activityItems: [text], applicationActivities: nil)
+            // iPad needs an anchor or it throws.
+            sheet.popoverPresentationController?.sourceView = root.view
+            sheet.popoverPresentationController?.sourceRect = CGRect(
+                x: root.view.bounds.midX, y: root.view.bounds.midY, width: 0, height: 0)
+            root.present(sheet, animated: true)
+        }
+
+        @MainActor
+        private static func activeScene() -> UIWindowScene? {
+            UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first { $0.activationState == .foregroundActive }
+                ?? UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
         }
 
         /// Push the per-oath selection counts back so the UI can label the row.

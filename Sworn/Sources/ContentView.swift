@@ -35,7 +35,8 @@ struct ContentView: View {
                 SplashView()
 
             } else if let session = auth.session {
-                WebView(page: "home", screenTime: screenTime, session: session, app: app)
+                WebView(page: "home", screenTime: screenTime, session: session, app: app,
+                        onSignOut: { auth.clear() })
                     .ignoresSafeArea()
                     .background(Color.black)
                     .task { screenTime.refreshAuthorizationState() }
