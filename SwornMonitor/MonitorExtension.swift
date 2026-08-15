@@ -9,6 +9,12 @@ final class SwornMonitor: DeviceActivityMonitor {
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
 
+        // The one-off window from "I'm tempted".
+        if activity.rawValue == Shared.urgeActivity {
+            Shared.applyUrgeShield()
+            return
+        }
+
         guard let id = Shared.oathId(from: activity.rawValue) else { return }
 
         // A schedule repeats daily; the oath may only cover some days.
@@ -28,6 +34,12 @@ final class SwornMonitor: DeviceActivityMonitor {
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
+
+        if activity.rawValue == Shared.urgeActivity {
+            Shared.clearUrgeShield()
+            return
+        }
+
         guard let id = Shared.oathId(from: activity.rawValue) else { return }
         Shared.store(id).clearAllSettings()
     }

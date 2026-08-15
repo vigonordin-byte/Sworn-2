@@ -134,6 +134,23 @@ commitment", rather than just collecting settings:
 Step 30 is the real question: do they want this enough to accept the friction?
 Accepting sets `committed` on the record.
 
+## Protection
+
+Two ways apps get blocked, both through the same Screen Time machinery.
+
+**Scheduled** — "I know I'm vulnerable at these times." Set during onboarding
+(step 31) and owned by the Commitments page afterwards. A window like
+20:00–23:00 with chosen apps and days; Sworn blocks them automatically.
+
+**On demand** — "I'm tempted" raises a shield over everything under any oath,
+immediately, for an hour. The shield goes up *before* any countdown, so
+protection never depends on the user sitting through something.
+
+That tap is deliberately framed as a success, not a confession: *"You noticed
+the urge. That's exactly what Sworn is for."* It is logged as a save and the
+analytics counts it as **temptation → protection activated**, never as a lapse.
+The loop is urge → notice it → ask for cover → create distance → survive it.
+
 ## The why
 
 The user's reason lives in `why.js`, shared by both pages and persisted to

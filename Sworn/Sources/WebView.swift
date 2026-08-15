@@ -88,6 +88,19 @@ struct WebView: UIViewRepresentable {
                     self.screenTime.sync(oaths: Self.oaths(from: body["oaths"]))
                     self.reportCounts()
 
+                case "urge":
+                    let minutes = body["minutes"] as? Int ?? 60
+                    guard self.screenTime.authorized else {
+                        let granted = await self.screenTime.requestAuthorization()
+                        self.call("window.sworn.onAuth(\(granted))")
+                        if granted { self.screenTime.raiseUrgeShield(minutes: minutes) }
+                        return
+                    }
+                    self.screenTime.raiseUrgeShield(minutes: minutes)
+
+                case "urgeClear":
+                    self.screenTime.lowerUrgeShield()
+
                 case "forget":
                     if let id = body["oathId"] as? Int { self.screenTime.forget(oathId: id) }
 

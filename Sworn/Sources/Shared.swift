@@ -16,6 +16,39 @@ enum Shared {
     /// Each oath monitors under its own name, e.g. "oath.3".
     static func activityName(_ oathId: Int) -> String { "oath.\(oathId)" }
 
+    /// The one-off window raised by "I'm tempted".
+    static let urgeActivity = "urge"
+    static let urgeStoreName = "urge"
+
+    static var urgeStore: ManagedSettingsStore {
+        ManagedSettingsStore(named: ManagedSettingsStore.Name(urgeStoreName))
+    }
+
+    /// Everything covered by any oath — what an urge shield blocks.
+    static func urgeSelection() -> FamilyActivitySelection {
+        var combined = FamilyActivitySelection()
+        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix("selection.") {
+            guard let id = Int(key.dropFirst("selection.".count)),
+                  let part = selection(for: id) else { continue }
+            combined.applicationTokens.formUnion(part.applicationTokens)
+            combined.categoryTokens.formUnion(part.categoryTokens)
+            combined.webDomainTokens.formUnion(part.webDomainTokens)
+        }
+        return combined
+    }
+
+    static func applyUrgeShield() {
+        let selection = urgeSelection()
+        let store = urgeStore
+        store.shield.applications = selection.applicationTokens.isEmpty ? nil : selection.applicationTokens
+        store.shield.applicationCategories = selection.categoryTokens.isEmpty ? nil : .specific(selection.categoryTokens)
+        store.shield.webDomains = selection.webDomainTokens.isEmpty ? nil : selection.webDomainTokens
+    }
+
+    static func clearUrgeShield() {
+        urgeStore.clearAllSettings()
+    }
+
     static func oathId(from activity: String) -> Int? {
         guard activity.hasPrefix("oath.") else { return nil }
         return Int(activity.dropFirst("oath.".count))

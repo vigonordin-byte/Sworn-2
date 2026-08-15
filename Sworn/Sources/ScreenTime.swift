@@ -74,7 +74,11 @@ final class ScreenTime: ObservableObject {
     /// device in step with the UI without diffing.
     func sync(oaths: [OathSpec]) {
         self.oaths = oaths
-        center.stopMonitoring()
+
+        // Only the oath windows — a bare stopMonitoring() would also cancel a
+        // running urge shield, leaving it raised with nothing to lift it.
+        let oathActivities = center.activities.filter { $0.rawValue != Shared.urgeActivity }
+        if !oathActivities.isEmpty { center.stopMonitoring(oathActivities) }
 
         // An oath that is off must not leave a stale shield behind.
         for oath in oaths where !oath.on {
@@ -107,6 +111,42 @@ final class ScreenTime: ObservableObject {
                 NSLog("Sworn: could not monitor oath \(oath.id): \(error.localizedDescription)")
             }
         }
+    }
+
+    // MARK: the urge shield
+
+    /// "I'm tempted" — block everything under any oath, right now, for a while.
+    /// The shield is applied immediately so it does not depend on the app
+    /// staying open, and a one-off DeviceActivity window lifts it again.
+    @discardableResult
+    func raiseUrgeShield(minutes: Int) -> Date {
+        let now = Date()
+        let end = now.addingTimeInterval(TimeInterval(minutes * 60))
+
+        Shared.applyUrgeShield()
+
+        let cal = Calendar.current
+        let schedule = DeviceActivitySchedule(
+            intervalStart: cal.dateComponents([.hour, .minute], from: now),
+            intervalEnd: cal.dateComponents([.hour, .minute], from: end),
+            repeats: false
+        )
+
+        center.stopMonitoring([DeviceActivityName(Shared.urgeActivity)])
+        do {
+            try center.startMonitoring(DeviceActivityName(Shared.urgeActivity), during: schedule)
+        } catch {
+            // The shield is already up; without the window it simply needs the
+            // app to lift it, so this is degraded rather than broken.
+            NSLog("Sworn: urge window not scheduled: \(error.localizedDescription)")
+        }
+
+        return end
+    }
+
+    func lowerUrgeShield() {
+        center.stopMonitoring([DeviceActivityName(Shared.urgeActivity)])
+        Shared.clearUrgeShield()
     }
 
     func forget(oathId: Int) {

@@ -16,6 +16,8 @@ const QUESTIONS = [
   ['Have you ever spent money on accessing explicit content?', ['Yes', 'No']]
 ];
 
+const PROTECT_APPS = ['Reddit', 'X', 'Safari', 'Instagram', 'TikTok', 'YouTube'];
+
 const AGE_OPTS = ['18–24', '25–34', '35–44', '45+'];
 const CALC_NOTES = ['Understanding responses', 'Weighing your triggers', 'Shaping your oath'];
 
@@ -106,14 +108,15 @@ const COST = 27;
 const FUTURE = 28;
 const REFLECT = 29;
 const COMMIT = 30;
+const PROTECT = 31;
 
-const BENEFITS = 31;
-const PATH = 32;
-const RATING = 33;
-const REFERRAL = 34;
-const NOTIFY = 35;
-const READY = 36;
-const PAYWALL = 37;
+const BENEFITS = 32;
+const PATH = 33;
+const RATING = 34;
+const REFERRAL = 35;
+const NOTIFY = 36;
+const READY = 37;
+const PAYWALL = 38;
 
 // ---------------------------------------------------------------- state
 
@@ -522,6 +525,67 @@ function commitScreen() {
     </div>`;
 }
 
+/* Their first scheduled protection. The framing matters: this is not a
+   punishment, it is them saying "I know I'm vulnerable at these times". */
+function protectScreen() {
+  const p = loadProtect();
+  return `
+    <div class="screen protect anim-rise-fast">
+      <div style="padding:0 22px">
+        ${backCircle()}
+        <div style="margin-top:16px;font-size:24px;font-weight:700;letter-spacing:4px;line-height:1.15">WHEN ARE YOU VULNERABLE?</div>
+        <div class="serif" style="margin-top:12px;font-size:20px;color:rgba(242,240,236,.55);text-wrap:pretty">“I know I'm vulnerable at these times.”</div>
+      </div>
+
+      <div class="scroll" style="top:196px;bottom:98px">
+        <div style="font-size:14px;line-height:1.55;color:rgba(242,240,236,.6);text-wrap:pretty">Sworn blocks your chosen apps automatically during this window. You won't have to decide anything in the moment — that is the whole point.</div>
+
+        <div class="window-row">
+          <label class="window-cell">
+            <span class="window-cell__label">FROM</span>
+            <input type="time" class="window-time" data-bind="protectFrom" value="${esc(p.from)}">
+          </label>
+          <span class="window-dash">–</span>
+          <label class="window-cell">
+            <span class="window-cell__label">TO</span>
+            <input type="time" class="window-time" data-bind="protectTo" value="${esc(p.to)}">
+          </label>
+        </div>
+
+        <div class="field-label" style="margin-top:22px">On these nights</div>
+        <div class="nights" style="margin-top:11px">
+          ${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, i) => `
+            <button type="button" class="night${on(p.days.includes(i))}" data-act="protect-day" data-i="${i}"
+              aria-pressed="${p.days.includes(i)}">${label}</button>`).join('')}
+        </div>
+
+        <div class="field-label" style="margin-top:24px">Apps to protect</div>
+        <div style="margin-top:11px;display:flex;flex-direction:column;gap:10px">
+          ${PROTECT_APPS.map((name) => {
+            const sel = p.apps.includes(name);
+            return `
+            <button type="button" class="pickrow${on(sel)}" data-act="protect-app" data-app="${esc(name)}" aria-pressed="${sel}">
+              <span class="dot"></span>
+              <span class="pickrow__label">${esc(name)}</span>
+            </button>`;
+          }).join('')}
+        </div>
+
+        <div class="protect-summary">
+          <div class="protect-summary__win">${esc(p.from)}–${esc(p.to)}</div>
+          <div class="protect-summary__apps">${p.apps.length ? esc(p.apps.join(', ')) + ' blocked' : 'Choose at least one app'}</div>
+          <div class="protect-summary__note">Sworn automatically protects you.</div>
+        </div>
+        <div style="height:24px"></div>
+      </div>
+
+      <div class="footer-bar">
+        <button class="cta cta--glow${p.apps.length ? '' : ' cta--muted'}" style="font-size:14px;letter-spacing:2.4px"
+          data-act="next" id="protectcta"${p.apps.length ? '' : ' disabled'}>PROTECT THESE HOURS →</button>
+      </div>
+    </div>`;
+}
+
 function benefits() {
   return `
     <div class="screen benefits anim-rise-fast">
@@ -709,6 +773,7 @@ function screenHtml() {
     case FUTURE: return futureScreen();
     case REFLECT: return reflectScreen();
     case COMMIT: return commitScreen();
+    case PROTECT: return protectScreen();
     case BENEFITS: return benefits();
     case PATH: return path();
     case RATING: return rating();
@@ -743,6 +808,21 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'goal': return toggle(S.goals, i);
     case 'reason': toggleWhyReason(i); return render();
     case 'commit': setWhyField('committed', true); return next();
+    case 'protect-day': {
+      const p = loadProtect();
+      const at = p.days.indexOf(i);
+      if (at === -1) p.days.push(i); else p.days.splice(at, 1);
+      saveProtect(p);
+      return render();
+    }
+    case 'protect-app': {
+      const p = loadProtect();
+      const name = el.dataset.app;
+      const at = p.apps.indexOf(name);
+      if (at === -1) p.apps.push(name); else p.apps.splice(at, 1);
+      saveProtect(p);
+      return render();
+    }
     case 'slide': return go(i);
     case 'plan': S.plan = i; return render();
   }
@@ -755,6 +835,12 @@ document.getElementById('phone').addEventListener('input', (e) => {
   if (key === 'whyText') {
     setWhyField('text', e.target.value);
     return;
+  }
+  if (key === 'protectFrom' || key === 'protectTo') {
+    const p = loadProtect();
+    p[key === 'protectFrom' ? 'from' : 'to'] = e.target.value;
+    saveProtect(p);
+    return render();
   }
   if (key === 'cost' || key === 'future') {
     setWhyField(key, e.target.value);

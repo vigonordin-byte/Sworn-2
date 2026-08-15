@@ -22,13 +22,22 @@ const TIER_COPY = [
   'A hundred days is no longer a streak, it is how you live. Eternal is the last tier because there is nothing beyond it to chase: the oath has become ordinary, and that is the whole point.'
 ];
 
-/* Day indices are 0 = Sunday, matching NIGHT_LABELS below. */
-let OATHS = [
+/* Day indices are 0 = Sunday, matching NIGHT_LABELS below.
+   Onboarding writes the first one; after that the Commitments page owns them. */
+const DEFAULT_OATHS = [
   { id: 1, name: 'No Reddit after 20:00', time: '20:00', until: '06:00', days: [0, 1, 2, 3, 4, 5, 6], apps: ['Reddit'], friction: 1, on: true },
   { id: 2, name: 'Phone out of the bedroom', time: '22:30', until: '07:00', days: [0, 1, 2, 3, 4], apps: ['Reddit', 'X', 'Instagram', 'TikTok'], friction: 1, on: false },
   { id: 3, name: 'No socials before work', time: '06:30', until: '09:00', days: [1, 2, 3, 4, 5], apps: ['Instagram', 'TikTok', 'X'], friction: 0, on: false }
 ];
-let nextOathId = 4;
+
+let OATHS = loadOaths() || DEFAULT_OATHS;
+let nextOathId = OATHS.reduce((n, o) => Math.max(n, o.id), 0) + 1;
+
+/** Every mutation goes through here so storage and the device stay in step. */
+function persistOaths() {
+  saveOaths(OATHS);
+  syncShields();
+}
 
 /** Apps the user can put under an oath. */
 const APP_LIST = ['Reddit', 'X', 'Instagram', 'TikTok', 'YouTube', 'Safari'];
@@ -72,7 +81,7 @@ const S = {
   daysSworn: 11,
   interventionSeconds: 60,
   faith: false,
-  view: 'home',        // home | running | done
+  view: 'home',        // home | protected | running | done
   left: 60,
   range: '30D',
   draft: null,         // the oath being created/edited, or null
@@ -111,6 +120,7 @@ const HELP = '<circle cx="12" cy="12" r="8.5"/><path d="M9.8 9.6a2.3 2.3 0 1 1 3
 const STAR = '<path d="m12 4.2 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.5l-4.8 2.6.9-5.4L4.2 9.9l5.4-.8z"/>';
 const DOC = '<path d="M6.5 3.8h7l4 4v12.4h-11z"/><path d="M13.5 3.8v4h4"/>';
 const PLUS = '<path d="M12 5.5v13M5.5 12h13"/>';
+const SHIELD_CHECK = '<path d="M12 3.2 19 6v5.8c0 4.4-2.9 7.4-7 9-4.1-1.6-7-4.6-7-9V6z"/><path d="M9 12.1l2.3 2.3 4.2-4.5"/>';
 
 const DIM = 'rgba(242,240,236,.55)';
 
@@ -245,6 +255,78 @@ function syncShields() {
 
 // ---------------------------------------------------------------- home
 
+/* Three states, in order of urgency: an urge shield running now, a scheduled
+   window armed for later, or nothing set up yet. */
+function protectionCard() {
+  const left = urgeRemaining();
+
+  if (left > 0) {
+    const total = URGE_MINUTES * 60_000;
+    const pct = Math.max(2, Math.round((left / total) * 100));
+    return `
+      <button type="button" class="card prot" data-act="tab" data-tab="commitments">
+        <span style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <span style="display:block">
+            <span class="prot__on"><i></i>PROTECTED · URGE</span>
+            <span style="display:block;margin-top:9px" class="prot__until">Until ${urgeUntilLabel()}</span>
+          </span>
+          <span style="display:flex;align-items:center;gap:10px;flex:0 0 auto">
+            <span style="display:block;text-align:right">
+              <span class="prot__left" style="display:block">${minutesLabel(left)}</span>
+              <span style="display:block;margin-top:4px;font-size:13px;font-weight:400;color:rgba(235,235,245,.5)">remaining</span>
+            </span>
+            <span class="chev">›</span>
+          </span>
+        </span>
+        <span class="prot__track" style="display:block"><i style="width:${pct}%"></i></span>
+      </button>`;
+  }
+
+  const lock = nextLock();
+  if (lock) {
+    return `
+      <button type="button" class="card prot" data-act="tab" data-tab="commitments">
+        <span style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <span style="display:block">
+            <span class="prot__on"><i></i>PROTECTED</span>
+            <span style="display:block;margin-top:9px" class="prot__until">${esc(lock.time)} – ${esc(lock.until)}</span>
+          </span>
+          <span style="display:flex;align-items:center;gap:10px;flex:0 0 auto">
+            <span style="display:block;text-align:right">
+              <span class="prot__left" style="display:block">${shieldCount(lock)}</span>
+              <span style="display:block;margin-top:4px;font-size:13px;font-weight:400;color:rgba(235,235,245,.5)">${shieldCount(lock) === 1 ? 'app' : 'apps'}</span>
+            </span>
+            <span class="chev">›</span>
+          </span>
+        </span>
+        <span style="display:block;margin-top:12px;font-size:13px;color:rgba(235,235,245,.5)">${esc(scheduleLabel(lock.days))} · ${esc(lock.name)}</span>
+      </button>`;
+  }
+
+  return `
+    <button type="button" class="card prot" data-act="tab" data-tab="commitments">
+      <span style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+        <span style="display:block">
+          <span class="prot__on prot__on--off"><i></i>NOT PROTECTED</span>
+          <span style="display:block;margin-top:9px" class="prot__until">Set a window</span>
+        </span>
+        <span class="chev">›</span>
+      </span>
+      <span style="display:block;margin-top:12px;font-size:13px;color:rgba(235,235,245,.5)">Choose the hours you know are hardest.</span>
+    </button>`;
+}
+
+/** Urge shields raised in the last 30 days. */
+function urgeSaves() {
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  return loadUrge().log.filter((t) => t >= cutoff).length;
+}
+
+const minutesLabel = (ms) => {
+  const mins = Math.max(1, Math.round(ms / 60000));
+  return mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
+};
+
 function homeTab() {
   const t = tierView(currentTier());
 
@@ -280,22 +362,7 @@ function homeTab() {
 
       <div class="vow">“${esc(whyText())}”</div>
 
-      <button type="button" class="card prot" data-act="tab" data-tab="commitments">
-        <span style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
-          <span style="display:block">
-            <span class="prot__on"><i></i>PROTECTED</span>
-            <span style="display:block;margin-top:9px" class="prot__until">${esc(PROTECTION.until)}</span>
-          </span>
-          <span style="display:flex;align-items:center;gap:10px;flex:0 0 auto">
-            <span style="display:block;text-align:right">
-              <span class="prot__left" style="display:block">${esc(PROTECTION.left)}</span>
-              <span style="display:block;margin-top:4px;font-size:13px;font-weight:400;color:rgba(235,235,245,.5)">remaining</span>
-            </span>
-            <span class="chev">›</span>
-          </span>
-        </span>
-        <span class="prot__track" style="display:block"><i style="width:${PROTECTION.progress}%"></i></span>
-      </button>
+      ${protectionCard()}
 
       <div class="actions">
         <button type="button" class="card action" data-act="sheet-new">
@@ -421,12 +488,30 @@ function intervention() {
   if (S.view === 'home') return '';
   const t = S.interventionSeconds;
 
+  /* Tapping "I'm tempted" is a success, not a confession. The first thing the
+     user sees is that it worked, and that the decision is already taken. */
+  if (S.view === 'protected') {
+    return `
+      <div class="intervene intervene--won">
+        <div class="won__ring">${svg(SHIELD_CHECK, 40, '#34c759', 1.8)}</div>
+        <div class="won__title">PROTECTION ACTIVATED</div>
+        <div class="won__body">You noticed the urge. That's exactly what Sworn is for.</div>
+        <div class="won__card">
+          <div class="won__label">YOUR PROTECTED APPS ARE BLOCKED</div>
+          <div class="won__until">Until ${urgeUntilLabel()}</div>
+          <div class="won__note">${minutesLabel(urgeRemaining())} of protection · you don't need to act on this feeling</div>
+        </div>
+        <button type="button" class="cta-gold" style="margin-top:auto" data-act="pause">TAKE 60 SECONDS</button>
+        <button type="button" style="margin-top:14px;background:none;border:0;color:rgba(242,240,236,.4);font-family:var(--sf);font-size:14px;cursor:pointer" data-act="cancel">I'm alright now</button>
+      </div>`;
+  }
+
   if (S.view === 'running') {
     const pct = ((t - S.left) / t) * 100;
     const [label, body] = phase();
     return `
       <div class="intervene">
-        <div class="intervene__eyebrow">You made a commitment</div>
+        <div class="intervene__eyebrow">${urgeRemaining() > 0 ? `Protected until ${urgeUntilLabel()}` : 'You made a commitment'}</div>
         <div style="margin-top:36px">
           <div class="count" role="timer"
             style="background:conic-gradient(#d9a441 ${pct}%, rgba(255,255,255,.07) ${pct}%)">
@@ -441,13 +526,16 @@ function intervention() {
       </div>`;
   }
 
+  const left = urgeRemaining();
   return `
     <div class="intervene">
-      <div style="margin-top:120px;font-size:23px;font-weight:700;letter-spacing:4px;text-align:center;line-height:1.3">DID YOU RESIST?</div>
-      <div style="margin-top:14px;font-size:13.5px;color:rgba(242,240,236,.5);text-align:center;max-width:270px;text-wrap:pretty">Whatever you answer, your commitment stands. You can renew it right now.</div>
+      <div style="margin-top:120px;font-size:23px;font-weight:700;letter-spacing:4px;text-align:center;line-height:1.3">YOU GOT THROUGH IT</div>
+      <div style="margin-top:14px;font-size:13.5px;color:rgba(242,240,236,.5);text-align:center;max-width:280px;text-wrap:pretty">${left > 0
+        ? `Your apps stay blocked until ${urgeUntilLabel()}. Nothing is asked of you until then.`
+        : 'The urge passed and your commitment stands.'}</div>
       <div style="margin-top:auto;width:100%;display:flex;flex-direction:column;gap:11px">
-        <button type="button" class="verdict verdict--gold" data-act="resisted">I KEPT MY WORD</button>
-        <button type="button" class="verdict verdict--dark" data-act="tempted">RENEW MY COMMITMENT</button>
+        <button type="button" class="verdict verdict--gold" data-act="resisted">DONE</button>
+        <button type="button" class="verdict verdict--dark" data-act="pause">ANOTHER 60 SECONDS</button>
       </div>
     </div>`;
 }
@@ -547,7 +635,12 @@ function analyticsTab() {
           <div><i style="background:#fff"></i>Resisted ${STATS.resisted}</div>
           <div><i style="background:rgba(255,255,255,.28)"></i>Continued ${STATS.attempts - STATS.resisted}</div>
         </span>
-        <span class="an-card__more" style="display:block;border-top:0;padding-top:0;margin-top:14px">${esc(STATS.resistedNote)}</span>` : ''}
+        <span class="an-card__more" style="display:block;border-top:0;padding-top:0;margin-top:14px">${esc(STATS.resistedNote)}</span>
+        <span class="saves">
+          <span class="saves__n">${urgeSaves()}</span>
+          <span class="saves__t">Temptation → protection activated</span>
+          <span class="saves__d">Times you noticed an urge and asked Sworn for cover. Each one is a save, not a slip.</span>
+        </span>` : ''}
       </button>
 
     </div>`;
@@ -805,6 +898,17 @@ function paintCount() {
   document.querySelector('.phase__body').textContent = body;
 }
 
+/* The urge shield goes up first — before any countdown — so protection does
+   not depend on the user sitting through anything. */
+function tapTempted() {
+  clearInterval(timer);
+  S.tab = 'home';
+  beginUrge(URGE_MINUTES);
+  if (NATIVE) native({ action: 'urge', minutes: URGE_MINUTES });
+  S.view = 'protected';
+  render();
+}
+
 function startIntervention() {
   clearInterval(timer);
   S.tab = 'home';
@@ -842,7 +946,8 @@ document.getElementById('phone').addEventListener('click', (e) => {
       if (S.view !== 'home') { clearInterval(timer); S.view = 'home'; }
       S.tab = el.dataset.tab;
       return render();
-    case 'tempted': return startIntervention();
+    case 'tempted': return tapTempted();
+    case 'pause': return startIntervention();
     case 'cancel':
     case 'resisted': return endIntervention();
     case 'achievements-open': S.achievementsOpen = true; return render();
@@ -868,7 +973,7 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'oath-toggle': {
       const o = OATHS.find((x) => x.id === Number(el.dataset.id));
       if (o) o.on = !o.on;
-      syncShields();
+      persistOaths();
       return render();
     }
     case 'oath-open': {
@@ -900,7 +1005,7 @@ document.getElementById('phone').addEventListener('click', (e) => {
       }
       S.draft = null;
       S.sheetSection = null;
-      syncShields();
+      persistOaths();
       return render();
     }
     case 'oath-break': {
@@ -909,7 +1014,7 @@ document.getElementById('phone').addEventListener('click', (e) => {
       S.draft = null;
       S.sheetSection = null;
       if (NATIVE) native({ action: 'forget', oathId: gone });
-      syncShields();
+      persistOaths();
       return render();
     }
     case 'pick-apps': {
