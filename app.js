@@ -86,29 +86,30 @@ const QUIZ_START = 1;
 const FINALLY = 11;
 const CALCULATING = 12;
 const ANALYSIS = 13;
-const SYMPTOMS = 14;
-const EDU = 15;
-const FEAT = 20;
-const GOALS = 26;
+const LIFE = 14;
+const SYMPTOMS = 15;
+const EDU = 16;
+const FEAT = 21;
+const GOALS = 27;
 
 /* The commitment arc: why → what it cost → what changes → read it back →
    accept the friction. This is the part that turns "I want to stop" into
    "I'm making a commitment". */
-const WHY = 27;
-const WRITE = 28;
-const REALIZE = 29;
-const COST = 30;
-const REFLECT = 31;
-const COMMIT = 32;
-const VULNERABLE = 33;
-const PROTECT = 34;
+const WHY = 28;
+const WRITE = 29;
+const REALIZE = 30;
+const COST = 31;
+const REFLECT = 32;
+const COMMIT = 33;
+const VULNERABLE = 34;
+const PROTECT = 35;
 
-const BENEFITS = 35;
-const PATH = 36;
-const REFERRAL = 37;
-const NOTIFY = 38;
-const READY = 39;
-const PAYWALL = 40;
+const BENEFITS = 36;
+const PATH = 37;
+const REFERRAL = 38;
+const NOTIFY = 39;
+const READY = 40;
+const PAYWALL = 41;
 
 // ---------------------------------------------------------------- native bridge
 
@@ -192,6 +193,7 @@ function go(step) {
   S.step = step;
   render();
   if (step === PATH) armPath();
+  if (step === LIFE) armLife();
 }
 
 /* End of the flow. In the app this hands over to sign-in and then home; in a
@@ -212,6 +214,7 @@ function finishOnboarding() {
 
 function next() {
   if (S.step === FINALLY) return startCalc();
+  if (S.step === ANALYSIS && !B().lifeCost) return go(SYMPTOMS);
   if (S.step === SYMPTOMS) return go(EDU);
   go(S.step + 1);
 }
@@ -302,11 +305,12 @@ function behaviorScreen() {
 }
 
 function question() {
-  const [text, options] = quiz()[S.step - QUIZ_START];
+  const [text, options, , note] = quiz()[S.step - QUIZ_START];
   return `
     <div class="screen q">
       <div class="eyebrow">QUESTION #${S.step - QUIZ_START + 1}</div>
       <div class="q__text" id="qtext">${esc(text)}</div>
+      ${note ? `<div class="serif" style="margin-top:12px;text-align:center;font-size:17px;color:rgba(242,240,236,.5)">${esc(note)}</div>` : ''}
       <div class="q__options" role="radiogroup" aria-labelledby="qtext">
         ${options.map((label, i) => `
           <button type="button" class="opt${on(S.answers[S.step] === label)}" data-act="option" data-i="${i}"
@@ -388,6 +392,53 @@ function analysis() {
       <div style="margin-top:8px;text-align:center;font-size:11.5px;color:rgba(242,240,236,.35);line-height:1.5">* This result is an indication only, not a medical diagnosis.</div>
       <button class="cta cta--glow" style="margin-top:auto;" data-act="next">Check your symptoms</button>
     </div>`;
+}
+
+/* How much life the habit takes, in years. The number is computed instantly
+   (the calculating screen already covered the "thinking"); the drama is in the
+   count-up, which starts low, runs fast and eases out onto the real figure. */
+function lifeCostYears() {
+  const lc = B().lifeCost || { question: 1, hours: {} };
+  const answer = S.answers[QUIZ_START + lc.question];
+  const hours = lc.hours[answer] || 3;
+  const ageMid = { '18–24': 21, '25–34': 30, '35–44': 40, '45+': 50 }[S.age] || 21;
+  const remaining = Math.max(5, 80 - ageMid);
+  return { hours, years: Math.max(0.1, (hours / 24) * remaining) };
+}
+
+function lifeScreen() {
+  const { hours, years } = lifeCostYears();
+  return `
+    <div class="screen realize anim-rise-fast">
+      ${backCircle()}
+      <div style="margin-top:44px;font-size:12px;letter-spacing:3.2px;font-weight:600;color:rgba(242,240,236,.45)">AT YOUR PACE</div>
+      <div style="margin-top:18px;display:flex;align-items:baseline;gap:12px">
+        <span id="lifeyears" style="font-size:74px;font-weight:700;letter-spacing:-1px;color:#e7bc6a">${years < 1 ? '0.1' : '1.0'}</span>
+        <span style="font-size:22px;font-weight:700;letter-spacing:3px">YEARS</span>
+      </div>
+      <div class="serif" style="margin-top:20px;font-size:24px;line-height:1.3;color:#f4e6c8;text-wrap:pretty">of your life will go to the feed if nothing changes.</div>
+      <div style="margin-top:16px;font-size:13px;line-height:1.55;color:rgba(242,240,236,.45);text-wrap:pretty">About ${hours} ${hours === 1 ? 'hour' : 'hours'} a day, carried to the average life expectancy of 80. An approximation, and a conservative one.</div>
+      <button class="cta cta--glow cta--muted" style="margin-top:auto;" id="lifecta" data-act="next" disabled>Continue</button>
+    </div>`;
+}
+
+/* Fast at first, easing onto the final figure, like a meter settling. */
+function armLife() {
+  const { years } = lifeCostYears();
+  const start = years < 1 ? 0.1 : 1;
+  const duration = 2400;
+  const t0 = Date.now();
+  timer = setInterval(() => {
+    const t = Math.min(1, (Date.now() - t0) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const el = document.getElementById('lifeyears');
+    if (el) el.textContent = (start + (years - start) * eased).toFixed(1);
+    if (t >= 1) {
+      clearInterval(timer);
+      const cta = document.getElementById('lifecta');
+      if (cta) { cta.disabled = false; cta.classList.remove('cta--muted'); }
+    }
+  }, 30);
 }
 
 function symptoms() {
@@ -860,6 +911,7 @@ function screenHtml() {
   if (step === FINALLY) return finallyScreen();
   if (step === CALCULATING) return calculating();
   if (step === ANALYSIS) return analysis();
+  if (step === LIFE) return lifeScreen();
   if (step === SYMPTOMS) return symptoms();
 
   const carousel = slideSet();
@@ -916,8 +968,11 @@ document.getElementById('phone').addEventListener('click', (e) => {
   switch (el.dataset.act) {
     case 'back': {
       // The calculating screen is a one-way transition; going back from the
-      // analysis must land on the quiz's last screen, not inside it.
-      const target = S.step - 1 === CALCULATING ? FINALLY : S.step - 1;
+      // analysis must land on the quiz's last screen, not inside it. And the
+      // life-cost step only exists for behaviours that declare one.
+      let target = S.step - 1;
+      if (target === LIFE && !B().lifeCost) target = ANALYSIS;
+      if (target === CALCULATING) target = FINALLY;
       return go(Math.max(0, target));
     }
     case 'skip': return go(FINALLY);

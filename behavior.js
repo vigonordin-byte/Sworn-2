@@ -125,6 +125,8 @@ const BEHAVIOR_CONFIG = {
     vulnerable: ['Late at night', "When I'm alone", 'After waking up', "When I'm stressed", 'After seeing something triggering', 'After getting into bed'],
     apps: ['Safari', 'Chrome', 'Reddit', 'X', 'Instagram', 'TikTok'],
 
+    lifeCost: null,
+
     commitLine: 'Commit to protecting yourself when temptation usually hits.',
     streakLabel: 'DAYS FREE',
     tempted: 'You noticed the urge. That’s exactly what Sworn is for.',
@@ -230,6 +232,8 @@ const BEHAVIOR_CONFIG = {
     vulnerable: ['During sports', "When I'm bored", 'After losing money', 'Late at night', "When I'm stressed", "When I'm watching a game"],
     apps: ['Safari', 'Chrome', 'Betting apps', 'X', 'Instagram', 'YouTube'],
 
+    lifeCost: null,
+
     commitLine: "Commit to staying away when you're most likely to bet.",
     streakLabel: 'DAYS BET-FREE',
     tempted: 'You noticed the pull. That’s exactly what Sworn is for.',
@@ -258,7 +262,10 @@ const BEHAVIOR_CONFIG = {
 
     quiz: [
       ['What is your gender?', ['Male', 'Female']],
-      ['How much do you scroll on an average day?', ['Under an hour', '1 to 2 hours', '3 to 4 hours', 'More than 4 hours'], [0, 0.33, 0.67, 1]],
+      ['How much do you scroll on an average day?',
+        ['Under 1 hour', '1 to 2 hours', '2 to 3 hours', '3 to 4 hours', '4 to 6 hours', 'More than 6 hours'],
+        [0, 0.2, 0.4, 0.6, 0.8, 1],
+        'A rough estimate is fine. No need to go and check.'],
       ['Where did you hear about us?', ['Instagram', 'TikTok', 'Facebook', 'Google', 'Therapist', 'X']],
       ['Do you open an app without deciding to?', ['Yes', 'No'], [1, 0]],
       ['How old were you when you got your first phone?', ['10 or younger', '11 to 13', '14 to 17', '18 or older']],
@@ -332,6 +339,20 @@ const BEHAVIOR_CONFIG = {
 
     vulnerable: ['After school or work', 'In bed', "When I'm bored", "When I'm stressed", 'When I should be working', 'When I wake up'],
     apps: ['Instagram', 'TikTok', 'YouTube', 'Reddit', 'X', 'Safari'],
+
+    /* The years-of-your-life reveal after the analysis. `question` is the
+       quiz index whose answer maps to hours per day. */
+    lifeCost: {
+      question: 1,
+      hours: {
+        'Under 1 hour': 0.5,
+        '1 to 2 hours': 1.5,
+        '2 to 3 hours': 2.5,
+        '3 to 4 hours': 3.5,
+        '4 to 6 hours': 5,
+        'More than 6 hours': 7
+      }
+    },
 
     commitLine: 'Commit to protecting your attention when you usually lose it.',
     streakLabel: 'DAYS IN CONTROL',
