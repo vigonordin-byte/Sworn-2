@@ -97,14 +97,23 @@ const SYMPTOMS = 13;
 const EDU = 14;
 const FEAT = 19;
 const GOALS = 25;
+
+/* The commitment arc: why → what it cost → what changes → read it back →
+   accept the friction. This is the part that turns "I want to stop" into
+   "I'm making a commitment". */
 const WHY = 26;
-const BENEFITS = 27;
-const PATH = 28;
-const RATING = 29;
-const REFERRAL = 30;
-const NOTIFY = 31;
-const READY = 32;
-const PAYWALL = 33;
+const COST = 27;
+const FUTURE = 28;
+const REFLECT = 29;
+const COMMIT = 30;
+
+const BENEFITS = 31;
+const PATH = 32;
+const RATING = 33;
+const REFERRAL = 34;
+const NOTIFY = 35;
+const READY = 36;
+const PAYWALL = 37;
 
 // ---------------------------------------------------------------- state
 
@@ -131,6 +140,11 @@ const SPARKLE = `<svg width="17" height="17" viewBox="0 0 24 24" fill="#e7bc6a">
 const BELL = `<svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#e7bc6a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 10a5.5 5.5 0 0 1 11 0c0 4 1.5 5.5 1.5 5.5H5s1.5-1.5 1.5-5.5z"/><path d="M10.3 19a2 2 0 0 0 3.4 0"/><circle cx="17.5" cy="6.5" r="2.8" fill="#e7bc6a" stroke="none"/></svg>`;
 
 const backCircle = () => `<button type="button" class="back-circle" data-act="back" aria-label="Go back">${CHEVRON(20)}</button>`;
+
+const termIcon = (paths) => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e7bc6a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+const LOCK_ICON = termIcon('<rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8.2 10.5V7.8a3.8 3.8 0 0 1 7.6 0v2.7"/>');
+const CLOCK_ICON = termIcon('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.4V12l3 1.8"/>');
+const SHIELD_ICON = termIcon('<path d="M12 3.2 19 6v5.8c0 4.4-2.9 7.4-7 9-4.1-1.6-7-4.6-7-9V6z"/>');
 
 // ---------------------------------------------------------------- helpers
 
@@ -425,6 +439,89 @@ function whyScreen() {
     </div>`;
 }
 
+/** A screen that asks them to write something, and will not move on until they do. */
+function writeScreen({ title, prompt, field, placeholder, cta }) {
+  const value = loadWhy()[field];
+  return `
+    <div class="screen why anim-rise-fast">
+      <div style="padding:0 22px">
+        ${backCircle()}
+        <div style="margin-top:16px;font-size:24px;font-weight:700;letter-spacing:4px;line-height:1.15">${title}</div>
+        <div class="serif" style="margin-top:12px;font-size:20px;color:rgba(242,240,236,.55);text-wrap:pretty">${prompt}</div>
+      </div>
+      <div class="scroll" style="top:186px;bottom:98px">
+        <textarea class="field field--area field--tall" data-bind="${field}"
+          placeholder="${esc(placeholder)}">${esc(value)}</textarea>
+        <div style="margin-top:12px;font-size:12.5px;color:rgba(242,240,236,.35);line-height:1.5">Only you ever see this. Sworn reads it back to you when you need it.</div>
+        <div style="height:24px"></div>
+      </div>
+      <div class="footer-bar">
+        <button class="cta cta--glow${value.trim() ? '' : ' cta--muted'}" style="font-size:14px;letter-spacing:2.6px"
+          data-act="next" id="writecta"${value.trim() ? '' : ' disabled'}>${cta}</button>
+      </div>
+    </div>`;
+}
+
+function costScreen() {
+  return writeScreen({
+    title: 'WHAT HAS IT COST YOU?',
+    prompt: 'Name what it has already taken. Be honest — no one else reads this.',
+    field: 'cost',
+    placeholder: 'My sleep, my focus, and how I feel about myself.',
+    cta: 'CONTINUE →'
+  });
+}
+
+function futureScreen() {
+  return writeScreen({
+    title: 'NINETY DAYS FROM NOW',
+    prompt: 'If you stopped today, what would be different?',
+    field: 'future',
+    placeholder: "I'd have my evenings back, and I'd trust myself again.",
+    cta: 'CONTINUE →'
+  });
+}
+
+/** Their own words, handed back before they are asked to commit. */
+function reflectScreen() {
+  return `
+    <div class="screen reflect anim-rise-fast">
+      ${backCircle()}
+      <div style="margin-top:38px;font-size:12px;letter-spacing:3.2px;font-weight:600;color:rgba(242,240,236,.45)">YOU SAID</div>
+      <div class="serif" style="margin-top:18px;font-size:27px;line-height:1.3;color:#f4e6c8;text-wrap:pretty">“${esc(commitmentQuote())}”</div>
+      <div style="margin-top:34px;font-size:17px;font-weight:600;line-height:1.4">Don't forget why you're here.</div>
+      <div style="margin-top:14px;font-size:15px;line-height:1.55;color:rgba(242,240,236,.55);text-wrap:pretty">You're not downloading another app to remind you that you should stop. You're here to actually stop.</div>
+      <button class="cta cta--glow" style="margin-top:auto;font-size:14px;letter-spacing:2.4px" data-act="next">MAKE THE COMMITMENT →</button>
+    </div>`;
+}
+
+const COMMIT_TERMS = [
+  [LOCK_ICON, 'Your protected apps will be blocked during the times you choose.'],
+  [CLOCK_ICON, "If you try to bypass your protection, you'll have to wait before you can disable it."],
+  [SHIELD_ICON, 'Sworn will make this harder to break — that is the point of it.']
+];
+
+function commitScreen() {
+  return `
+    <div class="screen commit anim-rise-fast">
+      ${backCircle()}
+      <div style="margin-top:30px;font-size:25px;font-weight:700;letter-spacing:3.8px;line-height:1.2">YOU'RE MAKING A COMMITMENT</div>
+      <div class="serif" style="margin-top:14px;font-size:20px;color:rgba(242,240,236,.55);text-wrap:pretty">Not a reminder. Not a tracker. Something you have to keep.</div>
+
+      <div class="terms">
+        ${COMMIT_TERMS.map(([icon, text]) => `
+          <div class="term">
+            <div class="term__icon">${icon}</div>
+            <div class="term__text">${esc(text)}</div>
+          </div>`).join('')}
+      </div>
+
+      <div style="margin-top:auto;text-align:center;font-size:17px;font-weight:600">Are you ready to commit?</div>
+      <button class="cta cta--glow" style="margin-top:16px;font-size:15px;letter-spacing:3px" data-act="commit">I'M READY</button>
+      <button type="button" class="skip" style="margin-top:14px;flex:0 0 auto" data-act="back">Not yet</button>
+    </div>`;
+}
+
 function benefits() {
   return `
     <div class="screen benefits anim-rise-fast">
@@ -608,6 +705,10 @@ function screenHtml() {
   switch (step) {
     case GOALS: return goals();
     case WHY: return whyScreen();
+    case COST: return costScreen();
+    case FUTURE: return futureScreen();
+    case REFLECT: return reflectScreen();
+    case COMMIT: return commitScreen();
     case BENEFITS: return benefits();
     case PATH: return path();
     case RATING: return rating();
@@ -641,6 +742,7 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'symptom': return toggle(S.symptoms, el.dataset.key);
     case 'goal': return toggle(S.goals, i);
     case 'reason': toggleWhyReason(i); return render();
+    case 'commit': setWhyField('committed', true); return next();
     case 'slide': return go(i);
     case 'plan': S.plan = i; return render();
   }
@@ -651,9 +753,19 @@ document.getElementById('phone').addEventListener('input', (e) => {
   const key = e.target.dataset.bind;
   if (!key) return;
   if (key === 'whyText') {
-    const why = loadWhy();
-    why.text = e.target.value;
-    return saveWhy(why);
+    setWhyField('text', e.target.value);
+    return;
+  }
+  if (key === 'cost' || key === 'future') {
+    setWhyField(key, e.target.value);
+    // Gate the CTA without re-rendering, or the caret jumps to the end.
+    const cta = document.getElementById('writecta');
+    if (cta) {
+      const ready = e.target.value.trim().length > 0;
+      cta.disabled = !ready;
+      cta.classList.toggle('cta--muted', !ready);
+    }
+    return;
   }
   S[key] = e.target.value;
 });

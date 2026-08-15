@@ -118,6 +118,22 @@ cannot go on a wildcard provisioning profile. Outside the app (plain browser)
 `NATIVE` is false and the app picker falls back to a mock list so the design
 still previews; nothing is blocked in that mode.
 
+## The commitment arc
+
+Steps 26–30 are the part that turns "I want to stop" into "I'm making a
+commitment", rather than just collecting settings:
+
+| Step | Screen | Asks |
+|---|---|---|
+| 26 | Why do you want to stop? | Preset reasons plus their own words |
+| 27 | What has it cost you? | Free text — the CTA stays disabled until they write |
+| 28 | Ninety days from now | Free text — what would be different |
+| 29 | You said… | Their own sentence handed back, then "make the commitment" |
+| 30 | You're making a commitment | The three terms, then "I'm ready" |
+
+Step 30 is the real question: do they want this enough to accept the friction?
+Accepting sets `committed` on the record.
+
 ## The why
 
 The user's reason lives in `why.js`, shared by both pages and persisted to

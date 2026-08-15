@@ -38,7 +38,24 @@ function loadWhy() {
   if (!whyCache || typeof whyCache !== 'object') whyCache = {};
   if (typeof whyCache.text !== 'string') whyCache.text = '';
   if (!Array.isArray(whyCache.reasons)) whyCache.reasons = [];
+  // Added later; older stored records will not have them.
+  if (typeof whyCache.cost !== 'string') whyCache.cost = '';
+  if (typeof whyCache.future !== 'string') whyCache.future = '';
+  if (typeof whyCache.committed !== 'boolean') whyCache.committed = false;
   return whyCache;
+}
+
+/** Write one field of the commitment record. */
+function setWhyField(field, value) {
+  const why = loadWhy();
+  why[field] = value;
+  saveWhy(why);
+}
+
+/** The line to read back to them. Their why, else the cost, else the stand-in. */
+function commitmentQuote() {
+  const why = loadWhy();
+  return why.text.trim() || why.cost.trim() || WHY_FALLBACK;
 }
 
 function saveWhy(why) {

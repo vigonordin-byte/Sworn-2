@@ -873,3 +873,45 @@ a:hover { color: var(--gold-lt); }
   letter-spacing: 2.4px;
 }
 .cta--dark:hover { filter: brightness(1.12); }
+
+/* ---------------------------------------------------------------- commitment arc */
+
+.reflect {
+  top: calc(22px + var(--safe-top));
+  display: flex;
+  flex-direction: column;
+  padding: 0 24px 28px;
+}
+
+.commit {
+  top: calc(22px + var(--safe-top));
+  display: flex;
+  flex-direction: column;
+  padding: 0 24px 28px;
+}
+
+.field--tall { min-height: 168px; }
+
+.terms { margin-top: 30px; display: flex; flex-direction: column; gap: 16px; }
+
+.term { display: flex; gap: 14px; align-items: flex-start; }
+
+.term__icon {
+  flex: 0 0 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(217, 164, 65, .12);
+  border: 1px solid rgba(217, 164, 65, .22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.term__text {
+  flex: 1;
+  padding-top: 3px;
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: rgba(242, 240, 236, .78);
+  text-wrap: pretty;
+}
