@@ -28,15 +28,21 @@ final class AppleAuth: NSObject, ObservableObject {
         static let greeted = "auth.greeted"
     }
 
+    /// How long to wait for Apple before trusting what we already have.
+    private static let credentialTimeout: Double = 3
+
     /// Reconnect a previous sign-in, unless Apple says it is no longer valid.
     func restore() async {
         defer { checking = false }
 
         guard let userId = defaults.string(forKey: Key.userId) else { return }
 
-        let state = await credentialState(for: userId)
-        guard state == .authorized else {
-            // Revoked in Settings, or signed out of the Apple ID entirely.
+        let state = await credentialState(for: userId, timeout: Self.credentialTimeout)
+
+        // nil means the check timed out. Signing the user out over a slow
+        // network would be worse than trusting the credential we already hold;
+        // a genuinely revoked one fails again at the next real use.
+        if let state, state != .authorized {
             clear()
             return
         }
@@ -85,11 +91,26 @@ final class AppleAuth: NSObject, ObservableObject {
 
     // MARK: helpers
 
-    private func credentialState(for userId: String) async -> ASAuthorizationAppleIDProvider.CredentialState {
-        await withCheckedContinuation { continuation in
-            ASAuthorizationAppleIDProvider().getCredentialState(forUserID: userId) { state, _ in
-                continuation.resume(returning: state)
+    /// Returns nil if Apple does not answer in time. Without this bound a hung
+    /// call leaves `checking` true forever, which shows as a black screen.
+    private func credentialState(for userId: String,
+                                 timeout: Double) async -> ASAuthorizationAppleIDProvider.CredentialState? {
+        await withTaskGroup(of: ASAuthorizationAppleIDProvider.CredentialState?.self) { group in
+            group.addTask {
+                await withCheckedContinuation { continuation in
+                    ASAuthorizationAppleIDProvider().getCredentialState(forUserID: userId) { state, _ in
+                        continuation.resume(returning: state)
+                    }
+                }
             }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                return nil
+            }
+
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            return first
         }
     }
 

@@ -30,8 +30,9 @@ struct ContentView: View {
                     .background(Color.black)
 
             } else if auth.checking {
-                // A blank hold rather than a flash of the sign-in screen.
-                Color.black.ignoresSafeArea()
+                // Held only while the stored sign-in is revalidated, and that
+                // check is bounded — see AppleAuth.credentialTimeout.
+                SplashView()
 
             } else if let session = auth.session {
                 WebView(page: "home", screenTime: screenTime, session: session, app: app)
