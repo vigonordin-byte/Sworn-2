@@ -149,6 +149,16 @@ final class ScreenTime: ObservableObject {
         Shared.clearUrgeShield()
     }
 
+    #if DEBUG
+    /// Developer reset: unschedule everything and drop every shield.
+    func resetAll() {
+        center.stopMonitoring()
+        for oath in oaths { Shared.store(oath.id).clearAllSettings() }
+        Shared.clearUrgeShield()
+        oaths = []
+    }
+    #endif
+
     func forget(oathId: Int) {
         center.stopMonitoring([DeviceActivityName(Shared.activityName(oathId))])
         Shared.forget(oathId: oathId)

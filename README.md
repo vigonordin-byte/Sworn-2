@@ -134,6 +134,34 @@ commitment", rather than just collecting settings:
 Step 30 is the real question: do they want this enough to accept the friction?
 Accepting sets `committed` on the record.
 
+## Developer states (DEBUG only)
+
+Settings → **Developer** switches the app between six states for testing. Each
+one writes the same stores the real app reads, so you land in the genuine
+screens rather than a mock of them:
+
+| State | What it sets up |
+|---|---|
+| New User | Nothing at all — onboarding from screen one |
+| Onboarded · no commitment | Finished onboarding, nothing protected: the empty Home |
+| Active commitment | Gold tier, protection armed, full analytics |
+| Intervention | The 60 seconds with mock data |
+| Broken commitment | The recovery screen, with a history behind it |
+| Reset all data | Everything, including the Apple sign-in |
+
+The countdown can be shortened to 15s or 5s, and jumped straight to any stage,
+so the intervention can be tested without waiting a minute each time.
+
+**None of this can reach a shipped build**, by two independent mechanisms:
+
+- `dev.js` is stripped from the Release bundle via `EXCLUDED_SOURCE_FILE_NAMES`
+- the flag that reveals the UI is only set under `#if DEBUG`
+
+Both are verified by building each configuration and diffing the bundles.
+Note that `SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG` must stay set in
+`project.yml` — xcodegen does not add it the way Xcode's own template does, and
+without it `#if DEBUG` is false everywhere.
+
 ## The three stages
 
 The app moves through them in this order:

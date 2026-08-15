@@ -176,6 +176,67 @@ function greeting() {
   return `${USER.firstRun ? 'Welcome' : 'Welcome back'}, ${USER.name}`;
 }
 
+// ---------------------------------------------------------------- progress
+
+/* The streak and the analytics figures. Stored rather than hardcoded so a new
+   install can genuinely be empty and a seeded one can be full. */
+
+const PROGRESS_KEY = 'sworn.progress';
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (p && typeof p.daysSworn === 'number') return { daysSworn: p.daysSworn };
+    }
+  } catch (e) {
+    // storage blocked
+  }
+  return { daysSworn: 11 };
+}
+
+function saveProgress(p) {
+  try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(p)); } catch (e) { /* blocked */ }
+}
+
+const STATS_KEY = 'sworn.stats';
+
+/** The figures behind the design. `hasData` false means show the empty state. */
+const STATS_SEEDED = {
+  hasData: true,
+  rate: 92, rateDelta: 14,
+  rateNote: 'You kept your limits on 47 of 51 protected occasions — 14 points better than the previous 30 days.',
+  hardest: '22:00 – 01:00',
+  hardestNote: 'That window holds 61% of your 44 interventions and lapses.',
+  resisted: 38, attempts: 44,
+  resistedNote: 'Five of the six lapses happened after 23:00, on nights with no lock set.'
+};
+
+const STATS_EMPTY = {
+  hasData: false,
+  rate: 0, rateDelta: 0, rateNote: '',
+  hardest: '—', hardestNote: '',
+  resisted: 0, attempts: 0, resistedNote: ''
+};
+
+function loadStats() {
+  try {
+    const raw = localStorage.getItem(STATS_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s && typeof s === 'object') return { ...STATS_SEEDED, ...s };
+    }
+  } catch (e) {
+    // storage blocked
+  }
+  return STATS_SEEDED;
+}
+
+function saveStats(s) {
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch (e) { /* blocked */ }
+}
+
 // ---------------------------------------------------------------- oaths
 
 /* The scheduled protection windows. Written by onboarding when the user sets

@@ -94,6 +94,18 @@ enum Shared {
         defaults.array(forKey: "days.\(oathId)") as? [Int] ?? Array(0...6)
     }
 
+    #if DEBUG
+    /// Developer reset: every key this app owns, plus any shield left standing.
+    static func wipeAll() {
+        clearUrgeShield()
+        for key in defaults.dictionaryRepresentation().keys
+        where key.hasPrefix("selection.") || key.hasPrefix("days.")
+           || key.hasPrefix("auth.") || key.hasPrefix("app.") {
+            defaults.removeObject(forKey: key)
+        }
+    }
+    #endif
+
     static func forget(oathId: Int) {
         defaults.removeObject(forKey: "selection.\(oathId)")
         defaults.removeObject(forKey: "days.\(oathId)")

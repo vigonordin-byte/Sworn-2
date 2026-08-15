@@ -62,23 +62,13 @@ const WEEKDAY_MAX = 11;
 
 const NIGHT_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-// Fixed in the design — not yet derived from real activity.
-const STATS = {
-  rate: 92, rateDelta: 14,
-  rateNote: 'You kept your limits on 47 of 51 protected occasions — 14 points better than the previous 30 days.',
-  hardest: '22:00 – 01:00',
-  hardestNote: 'That window holds 61% of your 44 interventions and lapses.',
-  resisted: 38, attempts: 44,
-  resistedNote: 'Five of the six lapses happened after 23:00, on nights with no lock set.'
-};
-
 const PROTECTION = { until: 'Until 8:00 AM', left: '8h 42m', progress: 38 };
 
 // ---------------------------------------------------------------- state
 
 const S = {
   tab: 'home',
-  daysSworn: 11,
+  daysSworn: loadProgress().daysSworn,
   interventionSeconds: 60,
   faith: false,
   view: 'home',        // home | protected | running | lapse
@@ -93,6 +83,7 @@ const S = {
   whyOpen: false,
   whyEditing: false,
   achievementsOpen: false,
+  devOpen: false,
   screenTimeAuthorized: false
 };
 
@@ -123,10 +114,19 @@ const HELP = '<circle cx="12" cy="12" r="8.5"/><path d="M9.8 9.6a2.3 2.3 0 1 1 3
 const STAR = '<path d="m12 4.2 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.5l-4.8 2.6.9-5.4L4.2 9.9l5.4-.8z"/>';
 const DOC = '<path d="M6.5 3.8h7l4 4v12.4h-11z"/><path d="M13.5 3.8v4h4"/>';
 const PLUS = '<path d="M12 5.5v13M5.5 12h13"/>';
+const WRENCH = '<path d="M14.7 6.3a4 4 0 0 1-5.3 5.3L5 16v3h3l4.4-4.4a4 4 0 0 1 5.3-5.3l-2.3 2.3-1.4-1.4z"/>';
 const REPLAY = '<path d="M3.5 12a8.5 8.5 0 1 1 2.6 6.1"/><path d="M3.5 19v-5h5"/>';
 const SHIELD_CHECK = '<path d="M12 3.2 19 6v5.8c0 4.4-2.9 7.4-7 9-4.1-1.6-7-4.6-7-9V6z"/><path d="M9 12.1l2.3 2.3 4.2-4.5"/>';
 
 const DIM = 'rgba(242,240,236,.55)';
+
+/* Present only in DEBUG builds. The native host sets __swornDebug under
+   #if DEBUG; ?debug=1 is the equivalent when previewing in a browser.
+   Both are moot in Release — dev.js is stripped from that bundle, so
+   window.SwornDev does not exist and this is false however it is asked. */
+const DEV = typeof window !== 'undefined'
+  && !!window.SwornDev
+  && (window.__swornDebug === true || /[?&]debug=1\b/.test(window.location.search));
 
 const svg = (paths, size, color, width) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color || 'currentColor'}" stroke-width="${width || 1.6}" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
@@ -611,6 +611,19 @@ function lapseScreen() {
 // ---------------------------------------------------------------- analytics
 
 function analyticsTab() {
+  const STATS = loadStats();
+
+  if (!STATS.hasData) {
+    return `
+      <div class="an-head">
+        <div class="an-head__title">YOUR LAST 30 DAYS</div>
+        <div class="an-head__sub">Three measures of how you are actually behaving.</div>
+      </div>
+      <div class="scroll" style="top:calc(106px + var(--safe-top));bottom:var(--nav-h);padding:22px 20px 24px">
+        <div class="empty">Nothing to measure yet.<br>Your record starts with your first protected night.</div>
+      </div>`;
+  }
+
   const bars = CHART_DATA[S.range];
   const gap = bars.length > 40 ? 1 : bars.length > 12 ? 2 : 6;
 
@@ -914,7 +927,65 @@ function settingsTab() {
         ${settingsRow(LOCK, 'Privacy policy', '')}
       </div>
 
+      ${DEV ? `
+      <div class="group-label" style="margin-top:24px">DEVELOPMENT</div>
+      <div class="group">
+        <button type="button" class="row" data-act="dev-open">
+          <span class="row__left">${svg(WRENCH, 20, DIM)}<span class="row__name">Developer</span></span>
+          <span class="row__value">DEBUG<span class="chev">›</span></span>
+        </button>
+      </div>` : ''}
+
       <div style="height:30px"></div>
+    </div>`;
+}
+
+/* DEBUG only. Drives the same stores the real app reads — picking a state
+   takes you into the genuine screens, not a mock of them. */
+function devPage() {
+  if (!DEV || !S.devOpen) return '';
+  const secs = SwornDev.duration();
+
+  return `
+    <div class="page">
+      <div class="bd-flat"></div>
+      <div class="page__head">
+        <button type="button" class="icon-btn" style="width:34px;height:34px" data-act="dev-close" aria-label="Back">
+          ${svg(CHEVRON, 22, '#fff', 1.9)}
+        </button>
+        <div class="page__title">DEVELOPER</div>
+      </div>
+
+      <div class="page__body">
+        <div class="dev-banner">Debug build only. These presets overwrite your real local state.</div>
+
+        <div class="group" style="margin:18px 0 0">
+          ${SwornDev.STATES.map((st) => `
+            <button type="button" class="row dev-row${st.destructive ? ' dev-row--danger' : ''}" data-act="dev-state" data-id="${st.id}">
+              <span style="display:block">
+                <span class="row__name" style="display:block">${esc(st.name)}</span>
+                <span class="dev-note">${esc(st.note)}</span>
+              </span>
+              <span class="chev">›</span>
+            </button>`).join('')}
+        </div>
+
+        <div class="group-label" style="margin:26px 0 0">COUNTDOWN</div>
+        <div class="group" style="margin:12px 0 0;padding:14px">
+          <div class="dev-note" style="margin:0 0 12px">Shorten the 60 seconds while testing.</div>
+          <div class="dev-chips">
+            ${SwornDev.DURATIONS.map((d) => `
+              <button type="button" class="dev-chip${on(secs === d)}" data-act="dev-duration" data-secs="${d}">${d}s</button>`).join('')}
+          </div>
+          <div class="dev-note" style="margin:16px 0 10px">Jump straight to a stage.</div>
+          <div class="dev-chips">
+            ${SwornDev.STAGES.map(([label, left]) => `
+              <button type="button" class="dev-chip" data-act="dev-stage" data-left="${left}">${label}</button>`).join('')}
+          </div>
+        </div>
+
+        <div style="height:30px"></div>
+      </div>
     </div>`;
 }
 
@@ -955,7 +1026,7 @@ function render() {
   document.getElementById('layer').innerHTML =
     (S.tab === 'home' ? intervention() : '') +
     oathSheet() +
-    achievements() + whyPage();
+    achievements() + whyPage() + devPage();
 }
 
 /* The clock is patched every second; the stage body is swapped only when the
@@ -1147,6 +1218,13 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'app': toggle(S.draft.apps, el.dataset.app); return render();
     case 'friction': S.draft.friction = i; return render();
     case 'faith': S.faith = !S.faith; return render();
+    case 'dev-open': S.devOpen = true; return render();
+    case 'dev-close': S.devOpen = false; return render();
+    case 'dev-state': return SwornDev.apply(el.dataset.id);
+    case 'dev-duration': SwornDev.setDuration(Number(el.dataset.secs)); return render();
+    case 'dev-stage':
+      S.devOpen = false;
+      return SwornDev.jumpTo(Number(el.dataset.left));
     case 'replay-onboarding':
       if (NATIVE) return native({ action: 'replayOnboarding' });
       try { localStorage.removeItem('sworn.onboarded'); } catch (e) { /* storage blocked */ }
@@ -1177,6 +1255,8 @@ document.getElementById('phone').addEventListener('input', (e) => {
 });
 
 render();
+
+if (DEV) SwornDev.runPending();
 
 if (NATIVE) {
   native({ action: 'authorize' });

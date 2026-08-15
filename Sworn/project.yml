@@ -27,6 +27,9 @@ targets:
         buildPhase: resources
       - path: ../why.js
         buildPhase: resources
+      # DEBUG only — excluded from the Release bundle below.
+      - path: ../dev.js
+        buildPhase: resources
       - path: ../app.js
         buildPhase: resources
       - path: ../home.js
@@ -61,6 +64,15 @@ targets:
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_ENTITLEMENTS: Sources/Sworn.entitlements
         DEVELOPMENT_TEAM: 3KBFWAD2YK
+      configs:
+        Debug:
+          # xcodegen does not set this the way Xcode's own template does, and
+          # without it #if DEBUG is false in Debug builds too.
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+        # The developer state switcher never reaches a shipped build: the file
+        # is stripped here, and the native flag that reveals it is #if DEBUG.
+        Release:
+          EXCLUDED_SOURCE_FILE_NAMES: dev.js
 
   # Out-of-process. iOS wakes it at each schedule boundary, and it is the only
   # place the shield is actually raised or lowered. Shared.swift compiles into
@@ -93,6 +105,9 @@ targets:
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_ENTITLEMENTS: ../SwornMonitor/SwornMonitor.entitlements
         DEVELOPMENT_TEAM: 3KBFWAD2YK
+      configs:
+        Debug:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
 
 # Declared explicitly so a freshly generated project is buildable without
 # Xcode having to auto-create a user scheme first.

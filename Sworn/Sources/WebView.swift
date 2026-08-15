@@ -21,8 +21,15 @@ struct WebView: UIViewRepresentable {
 
         // Tells the web layer a native host is present and who is signed in,
         // before any page script runs, so the first paint is already correct.
+        var boot = "window.__swornNative = true; window.__swornUser = \(Self.userJSON(session));"
+        #if DEBUG
+        // The Developer section keys off this. It is never compiled into a
+        // Release build, and dev.js is stripped from that bundle besides.
+        boot += " window.__swornDebug = true;"
+        #endif
+
         config.userContentController.addUserScript(WKUserScript(
-            source: "window.__swornNative = true; window.__swornUser = \(Self.userJSON(session));",
+            source: boot,
             injectionTime: .atDocumentStart,
             forMainFrameOnly: true
         ))
@@ -121,6 +128,17 @@ struct WebView: UIViewRepresentable {
 
                 case "replayOnboarding":
                     self.app.replayOnboarding()
+
+                #if DEBUG
+                case "devOnboarded":
+                    let value = body["value"] as? Bool ?? false
+                    if value { self.app.completeOnboarding() } else { self.app.replayOnboarding() }
+
+                case "devReset":
+                    self.screenTime.resetAll()
+                    self.app.replayOnboarding()
+                    Shared.wipeAll()
+                #endif
 
                 case "forget":
                     if let id = body["oathId"] as? Int { self.screenTime.forget(oathId: id) }

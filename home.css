@@ -1463,3 +1463,45 @@ body { font-family: var(--sf); }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ---------------------------------------------------------------- developer
+
+   DEBUG builds only. Deliberately plain — it borrows the existing page, group
+   and row components rather than introducing anything new. */
+
+.dev-banner {
+  padding: 13px 15px;
+  border-radius: 12px;
+  background: rgba(217, 164, 65, .1);
+  border: 1px solid rgba(217, 164, 65, .25);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: rgba(242, 240, 236, .7);
+}
+
+.dev-row { align-items: flex-start; gap: 14px; }
+.dev-row--danger .row__name { color: #e88178; }
+
+.dev-note {
+  display: block;
+  margin-top: 5px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: rgba(235, 235, 245, .45);
+  font-weight: 400;
+}
+
+.dev-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.dev-chip {
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: var(--chip);
+  border: 0;
+  color: rgba(242, 240, 236, .75);
+  font-family: var(--sf);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dev-chip.is-on { background: var(--gold); color: #1a1408; }
