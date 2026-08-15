@@ -387,10 +387,10 @@ function homeTab() {
         </button>
       </div>
 
-      <div style="position:relative;margin:20px 20px 0">
+      <div style="position:relative;margin:14px 20px 0">
         <button type="button" class="tempted" data-act="tempted">I'm tempted</button>
       </div>
-      <div style="height:20px"></div>
+      <div style="height:12px"></div>
     </div>`;
 }
 

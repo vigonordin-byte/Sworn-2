@@ -251,8 +251,8 @@ body { font-family: var(--sf); }
 
 .seal-wrap {
   position: relative;
-  margin-top: 26px;
-  padding-top: 30px;
+  margin-top: 12px;
+  padding-top: 18px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -399,7 +399,7 @@ body { font-family: var(--sf); }
 
 .vow {
   position: relative;
-  margin-top: 34px;
+  margin-top: 24px;
   padding: 0 30px;
   font-size: 17px;
   font-weight: 400;
@@ -1454,8 +1454,8 @@ body { font-family: var(--sf); }
 
 /* The wordmark becomes a greeting once we know who they are. */
 .apphead__mark--greet {
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 650;
   letter-spacing: -.2px;
   text-transform: none;
   max-width: 260px;
