@@ -93,3 +93,15 @@ targets:
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_ENTITLEMENTS: ../SwornMonitor/SwornMonitor.entitlements
         DEVELOPMENT_TEAM: 3KBFWAD2YK
+
+# Declared explicitly so a freshly generated project is buildable without
+# Xcode having to auto-create a user scheme first.
+schemes:
+  Sworn:
+    build:
+      targets:
+        Sworn: all
+    run:
+      config: Debug
+    archive:
+      config: Release

@@ -8,9 +8,11 @@ import WebKit
 struct WebView: UIViewRepresentable {
     let page: String
     let screenTime: ScreenTime
-    let session: AppleAuth.Session
+    /// Absent during onboarding — nobody has signed in yet.
+    let session: AppleAuth.Session?
+    let app: AppState
 
-    func makeCoordinator() -> Bridge { Bridge(screenTime: screenTime) }
+    func makeCoordinator() -> Bridge { Bridge(screenTime: screenTime, app: app) }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -48,7 +50,8 @@ struct WebView: UIViewRepresentable {
     }
 
     /// `{ name, firstRun }` — safely encoded, since a name is arbitrary text.
-    private static func userJSON(_ session: AppleAuth.Session) -> String {
+    private static func userJSON(_ session: AppleAuth.Session?) -> String {
+        guard let session else { return "null" }
         let payload: [String: Any] = ["name": session.name, "firstRun": session.firstRun]
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
               let json = String(data: data, encoding: .utf8) else { return "null" }
@@ -60,9 +63,11 @@ struct WebView: UIViewRepresentable {
     final class Bridge: NSObject, WKScriptMessageHandler {
         weak var webView: WKWebView?
         private let screenTime: ScreenTime
+        private let app: AppState
 
-        init(screenTime: ScreenTime) {
+        init(screenTime: ScreenTime, app: AppState) {
             self.screenTime = screenTime
+            self.app = app
             super.init()
             // Relabel the row as soon as a pick lands, without the web layer
             // having to poll for it.
@@ -109,6 +114,13 @@ struct WebView: UIViewRepresentable {
 
                 case "urgeClear":
                     self.screenTime.lowerUrgeShield()
+
+                case "onboarded":
+                    // The flow is finished; ContentView moves on to sign-in.
+                    self.app.completeOnboarding()
+
+                case "replayOnboarding":
+                    self.app.replayOnboarding()
 
                 case "forget":
                     if let id = body["oathId"] as? Int { self.screenTime.forget(oathId: id) }

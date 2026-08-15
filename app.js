@@ -180,6 +180,18 @@ function go(step) {
   render();
 }
 
+/* End of the flow. In the app this hands over to sign-in and then home; in a
+   browser there is no native host, so just walk to the main page. */
+function finishOnboarding() {
+  setWhyField('committed', true);
+  if (window.webkit?.messageHandlers?.sworn) {
+    window.webkit.messageHandlers.sworn.postMessage({ action: 'onboarded' });
+    return;
+  }
+  try { localStorage.setItem('sworn.onboarded', '1'); } catch (e) { /* storage blocked */ }
+  window.location.href = 'home.html';
+}
+
 function next() {
   if (S.step === FINALLY) return startCalc();
   if (S.step === SYMPTOMS) return go(EDU);
@@ -762,7 +774,7 @@ function paywall() {
           </button>`).join('')}
         </div>
         <div style="margin-top:12px;text-align:center;font-size:12.5px;color:#6d675e">No commitment, cancel anytime</div>
-        <button class="cta cta--dark" style="margin-top:12px" data-act="restart">START MY JOURNEY TODAY</button>
+        <button class="cta cta--dark" style="margin-top:12px" data-act="finish">START MY JOURNEY TODAY</button>
       </div>
     </div>`;
 }
@@ -816,6 +828,7 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'back': return go(Math.max(0, S.step - 1));
     case 'skip': return go(FINALLY);
     case 'next': return next();
+    case 'finish': return finishOnboarding();
     case 'restart': return go(0);
     case 'option': return pickOption(i);
     case 'age': S.age = AGE_OPTS[i]; return render();

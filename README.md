@@ -134,6 +134,25 @@ commitment", rather than just collecting settings:
 Step 30 is the real question: do they want this enough to accept the friction?
 Accepting sets `committed` on the record.
 
+## The three stages
+
+The app moves through them in this order:
+
+```
+onboarding  →  sign in  →  the app
+```
+
+`ContentView` picks the stage from `Shared.onboarded`, which lives in the App
+Group rather than webview storage so it does not depend on what the page can
+persist. Onboarding loads `index.html`; finishing it at the paywall posts
+`onboarded` to native, which flips the flag and hands over to sign-in, then to
+`home.html`.
+
+Sign-in deliberately comes *after* onboarding — it belongs with the paywall at
+the end of the flow, not in front of someone who has not seen the product yet.
+
+Settings → **Replay onboarding** clears the flag and walks the flow again.
+
 ## Signing in
 
 Sign in with Apple, gating the whole app. The sign-in screen is rendered

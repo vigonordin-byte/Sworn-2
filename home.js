@@ -123,6 +123,7 @@ const HELP = '<circle cx="12" cy="12" r="8.5"/><path d="M9.8 9.6a2.3 2.3 0 1 1 3
 const STAR = '<path d="m12 4.2 2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.5l-4.8 2.6.9-5.4L4.2 9.9l5.4-.8z"/>';
 const DOC = '<path d="M6.5 3.8h7l4 4v12.4h-11z"/><path d="M13.5 3.8v4h4"/>';
 const PLUS = '<path d="M12 5.5v13M5.5 12h13"/>';
+const REPLAY = '<path d="M3.5 12a8.5 8.5 0 1 1 2.6 6.1"/><path d="M3.5 19v-5h5"/>';
 const SHIELD_CHECK = '<path d="M12 3.2 19 6v5.8c0 4.4-2.9 7.4-7 9-4.1-1.6-7-4.6-7-9V6z"/><path d="M9 12.1l2.3 2.3 4.2-4.5"/>';
 
 const DIM = 'rgba(242,240,236,.55)';
@@ -899,6 +900,10 @@ function settingsTab() {
       <div class="group">
         ${settingsRow(BELL, 'Notifications', 'Daily')}
         ${settingsRow(EXPORT, 'Export my record', '')}
+        <button type="button" class="row" data-act="replay-onboarding">
+          <span class="row__left">${svg(REPLAY, 20, DIM)}<span class="row__name">Replay onboarding</span></span>
+          <span class="row__value"><span class="chev">›</span></span>
+        </button>
       </div>
 
       <div class="group-label" style="margin-top:24px">SUPPORT &amp; LEGAL</div>
@@ -1142,6 +1147,11 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'app': toggle(S.draft.apps, el.dataset.app); return render();
     case 'friction': S.draft.friction = i; return render();
     case 'faith': S.faith = !S.faith; return render();
+    case 'replay-onboarding':
+      if (NATIVE) return native({ action: 'replayOnboarding' });
+      try { localStorage.removeItem('sworn.onboarded'); } catch (e) { /* storage blocked */ }
+      window.location.href = 'index.html';
+      return;
   }
 });
 

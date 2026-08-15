@@ -11,6 +11,13 @@ enum Shared {
         UserDefaults(suiteName: appGroup) ?? .standard
     }
 
+    /// Whether onboarding has been completed. Kept here rather than in webview
+    /// storage so it survives regardless of what the page can persist.
+    static var onboarded: Bool {
+        get { defaults.bool(forKey: "app.onboarded") }
+        set { defaults.set(newValue, forKey: "app.onboarded") }
+    }
+
     // MARK: activity names
 
     /// Each oath monitors under its own name, e.g. "oath.3".

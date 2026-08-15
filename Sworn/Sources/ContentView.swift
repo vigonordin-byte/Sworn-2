@@ -1,13 +1,17 @@
 import SwiftUI
 import FamilyControls
 
-/// Which bundled page the app opens on.
-/// "home" is the main app; switch to "index" for the onboarding flow.
-private let startPage = "home"
+/* The app has three stages, in this order:
+
+     onboarding  →  sign in  →  the app
+
+   Sign-in comes after onboarding, not before, because it belongs with the
+   paywall at the end of the flow rather than in front of a stranger. */
 
 struct ContentView: View {
     @StateObject private var screenTime = ScreenTime()
     @StateObject private var auth = AppleAuth()
+    @StateObject private var app = AppState()
 
     private var pickerShown: Binding<Bool> {
         Binding(
@@ -20,15 +24,22 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if auth.checking {
+            if !app.onboarded {
+                WebView(page: "index", screenTime: screenTime, session: nil, app: app)
+                    .ignoresSafeArea()
+                    .background(Color.black)
+
+            } else if auth.checking {
                 // A blank hold rather than a flash of the sign-in screen.
                 Color.black.ignoresSafeArea()
+
             } else if let session = auth.session {
-                WebView(page: startPage, screenTime: screenTime, session: session)
+                WebView(page: "home", screenTime: screenTime, session: session, app: app)
                     .ignoresSafeArea()
                     .background(Color.black)
                     .task { screenTime.refreshAuthorizationState() }
                     .familyActivityPicker(isPresented: pickerShown, selection: $screenTime.selection)
+
             } else {
                 SignInView(auth: auth)
             }
