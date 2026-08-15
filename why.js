@@ -23,6 +23,67 @@ const WHY_REASONS = [
   'I want to stop being controlled by my urges'
 ];
 
+/* One realization per reason, in the same order as WHY_REASONS. Each takes what
+   the user already told us and turns it back into something confronting — not
+   a lecture, and never shame. Shown once in onboarding, before they commit. */
+const REALIZATIONS = [
+  // Religious beliefs
+  ['You already know what you believe.',
+   "The difficult part isn't knowing. It's choosing it when temptation comes."],
+
+  // I feel disgusted afterward
+  ['You already know how this ends.',
+   'The urge lasts minutes. The regret lasts much longer. Don’t trade what you actually want for what you want right now.'],
+
+  // It makes me feel depressed
+  ['How many times have you promised yourself it would be the last?',
+   "You don't need another promise. You need a system that helps you keep this one."],
+
+  // I feel like I'm losing control
+  ["Control isn't a feeling. It's a decision you already made.",
+   'You decided once, calmly, with a clear head. The urge will argue otherwise. Sworn holds you to the version of you that decided.'],
+
+  // It hurts my confidence
+  ['Confidence is built from evidence.',
+   'Not from motivation, not from a good week — from times you said you would do something and then did it. Every one you keep is proof.'],
+
+  // It wastes my time
+  ['You are not short of time. You are short of the hours it takes.',
+   'An evening is always traded for something. Decide now what yours is worth, while it is still yours to decide.'],
+
+  // It affects my relationships
+  ["It doesn't stay private.",
+   'It shows up as distance, as being half-present, as attention that went somewhere else first. The people closest to you feel it before they can name it.'],
+
+  // I want more discipline
+  ['Imagine who you could become.',
+   "Every time you give in, you're reinforcing the habit you're trying to escape. Every time you resist, you're practicing the person you want to become. This isn't about one night — it's about who you're becoming."],
+
+  // I want to become a better version of myself
+  ["You don't become that person one day.",
+   "You become them in the small moments nobody sees — the ones you'd get away with. That is where it is actually decided."],
+
+  // I want to live according to my values
+  ["Values you keep only when it's easy aren't values yet.",
+   'They become yours the first time you hold one when it costs you something. That moment is coming. You can decide now how you meet it.'],
+
+  // I want to stop being controlled by my urges
+  ['An urge is a suggestion, not an order.',
+   "It feels enormous, and it passes. You don't have to win against it. You only have to outlast it."]
+];
+
+const REALIZATION_FALLBACK = [
+  'Wanting to stop is not the same as stopping.',
+  "You've wanted to before. What changes it isn't more wanting — it's something standing in the way at the moment it counts."
+];
+
+/** The realization for the first reason they picked. */
+function realization() {
+  const picked = loadWhy().reasons;
+  const first = picked.length ? picked[0] : -1;
+  return REALIZATIONS[first] || REALIZATION_FALLBACK;
+}
+
 /* Storage can be unavailable on some file:// origins, so everything falls back
    to this in-memory copy rather than throwing. */
 let whyCache = null;
@@ -152,13 +213,25 @@ function loadUrge() {
     if (raw) {
       const u = JSON.parse(raw);
       if (u && typeof u === 'object') {
-        return { until: u.until || 0, log: Array.isArray(u.log) ? u.log : [] };
+        return {
+          until: u.until || 0,
+          log: Array.isArray(u.log) ? u.log : [],
+          lapses: Array.isArray(u.lapses) ? u.lapses : []
+        };
       }
     }
   } catch (e) {
     // storage blocked
   }
-  return { until: 0, log: [] };
+  return { until: 0, log: [], lapses: [] };
+}
+
+/* A lapse is recorded, never scored. It exists so the user can say what
+   happened and start again — not so the app can hold it against them. */
+function recordLapse(note) {
+  const urge = loadUrge();
+  urge.lapses.push({ at: Date.now(), note: (note || '').trim() });
+  saveUrge(urge);
 }
 
 function saveUrge(urge) {

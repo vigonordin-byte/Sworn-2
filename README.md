@@ -134,6 +134,23 @@ commitment", rather than just collecting settings:
 Step 30 is the real question: do they want this enough to accept the friction?
 Accepting sets `committed` on the record.
 
+## Where the answers get used
+
+Onboarding answers are deliberately *not* used everywhere. They appear at four
+moments where they carry weight, and nowhere else:
+
+1. **The realization** (onboarding step 27) — their chosen reason turned back
+   on them. `REALIZATIONS` in `why.js` holds one per reason; the first reason
+   they tapped decides which. "I want more discipline" gets *"Imagine who you
+   could become"*; "I feel disgusted afterward" gets *"You already know how this
+   ends"*.
+2. **The intervention** — their own sentence, mid-countdown, at the moment a
+   protected app is opened. This is the functional use, not decoration.
+3. **My why** — somewhere to go and reconnect with it deliberately.
+4. **After a lapse** — their reason becomes a way to recommit, never a rebuke.
+   "You gave in. You said … What happened? Start again." Nothing is scored and
+   nothing is taken away; the note is optional and only stored.
+
 ## Protection
 
 Two ways apps get blocked, both through the same Screen Time machinery.

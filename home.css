@@ -1227,3 +1227,59 @@ body { font-family: var(--sf); }
 .saves__n { display: block; font-size: 26px; font-weight: 600; letter-spacing: -1px; color: var(--green-tx); }
 .saves__t { display: block; margin-top: 4px; font-size: 13.5px; font-weight: 600; }
 .saves__d { display: block; margin-top: 6px; font-size: 12.5px; line-height: 1.45; color: rgba(235, 235, 245, .5); }
+
+/* ---------------------------------------------------------------- starting again */
+
+/* Deliberately quiet. No red, no alarm — they already feel it. */
+.intervene--calm { justify-content: flex-start; }
+
+.lapse__title {
+  margin-top: 34px;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -.4px;
+  align-self: flex-start;
+}
+
+.lapse__said {
+  margin-top: 26px;
+  align-self: flex-start;
+  font-size: 13px;
+  color: rgba(235, 235, 245, .5);
+}
+
+.lapse__quote {
+  margin-top: 10px;
+  align-self: flex-start;
+  font-size: 21px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--cream);
+  text-wrap: pretty;
+}
+
+.lapse__ask {
+  margin-top: 26px;
+  align-self: flex-start;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.lapse__foot {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 12.5px;
+  color: rgba(235, 235, 245, .4);
+}
+
+.quiet {
+  margin-top: 4px;
+  width: 100%;
+  padding: 14px;
+  background: none;
+  border: 0;
+  color: rgba(242, 240, 236, .38);
+  font-family: var(--sf);
+  font-size: 14px;
+  cursor: pointer;
+}

@@ -81,7 +81,7 @@ const S = {
   daysSworn: 11,
   interventionSeconds: 60,
   faith: false,
-  view: 'home',        // home | protected | running | done
+  view: 'home',        // home | protected | running | done | lapse
   left: 60,
   range: '30D',
   draft: null,         // the oath being created/edited, or null
@@ -506,6 +506,8 @@ function intervention() {
       </div>`;
   }
 
+  if (S.view === 'lapse') return lapseScreen();
+
   if (S.view === 'running') {
     const pct = ((t - S.left) / t) * 100;
     const [label, body] = phase();
@@ -536,7 +538,23 @@ function intervention() {
       <div style="margin-top:auto;width:100%;display:flex;flex-direction:column;gap:11px">
         <button type="button" class="verdict verdict--gold" data-act="resisted">DONE</button>
         <button type="button" class="verdict verdict--dark" data-act="pause">ANOTHER 60 SECONDS</button>
+        <button type="button" class="quiet" data-act="lapse">I gave in</button>
       </div>
+    </div>`;
+}
+
+/* Not a verdict. They already know what happened; this only gives them their
+   own reason back and a way to start again. */
+function lapseScreen() {
+  return `
+    <div class="intervene intervene--calm">
+      <div class="lapse__title">You gave in.</div>
+      <div class="lapse__said">You said:</div>
+      <div class="lapse__quote">“${esc(whyText())}”</div>
+      <div class="lapse__ask">What happened?</div>
+      <textarea class="why-edit" id="lapsenote" placeholder="Optional. Only you ever see this."></textarea>
+      <button type="button" class="cta-gold" style="margin-top:auto" data-act="again">START AGAIN</button>
+      <div class="lapse__foot">Nothing is taken away. Your commitment still stands.</div>
     </div>`;
 }
 
@@ -950,6 +968,12 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'pause': return startIntervention();
     case 'cancel':
     case 'resisted': return endIntervention();
+    case 'lapse': S.view = 'lapse'; return render();
+    case 'again': {
+      const note = document.getElementById('lapsenote');
+      recordLapse(note ? note.value : '');
+      return endIntervention();
+    }
     case 'achievements-open': S.achievementsOpen = true; return render();
     case 'achievements-close': S.achievementsOpen = false; return render();
     case 'why-open': S.whyOpen = true; return render();

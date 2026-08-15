@@ -104,19 +104,20 @@ const GOALS = 25;
    accept the friction. This is the part that turns "I want to stop" into
    "I'm making a commitment". */
 const WHY = 26;
-const COST = 27;
-const FUTURE = 28;
-const REFLECT = 29;
-const COMMIT = 30;
-const PROTECT = 31;
+const REALIZE = 27;
+const COST = 28;
+const FUTURE = 29;
+const REFLECT = 30;
+const COMMIT = 31;
+const PROTECT = 32;
 
-const BENEFITS = 32;
-const PATH = 33;
-const RATING = 34;
-const REFERRAL = 35;
-const NOTIFY = 36;
-const READY = 37;
-const PAYWALL = 38;
+const BENEFITS = 33;
+const PATH = 34;
+const RATING = 35;
+const REFERRAL = 36;
+const NOTIFY = 37;
+const READY = 38;
+const PAYWALL = 39;
 
 // ---------------------------------------------------------------- state
 
@@ -439,6 +440,19 @@ function whyScreen() {
       <div class="footer-bar">
         <button class="cta cta--glow" style="font-size:14px;letter-spacing:2.6px" data-act="next">SAVE MY WHY →</button>
       </div>
+    </div>`;
+}
+
+/* Their own reason, turned back on them. This is the moment onboarding stops
+   collecting answers and starts making a case. */
+function realizeScreen() {
+  const [title, body] = realization();
+  return `
+    <div class="screen realize anim-rise-fast">
+      ${backCircle()}
+      <div class="realize__title">${esc(title)}</div>
+      <div class="realize__body">${esc(body)}</div>
+      <button class="cta cta--glow" style="margin-top:auto;font-size:14px;letter-spacing:2.4px" data-act="next">CONTINUE →</button>
     </div>`;
 }
 
@@ -769,6 +783,7 @@ function screenHtml() {
   switch (step) {
     case GOALS: return goals();
     case WHY: return whyScreen();
+    case REALIZE: return realizeScreen();
     case COST: return costScreen();
     case FUTURE: return futureScreen();
     case REFLECT: return reflectScreen();
