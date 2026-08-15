@@ -119,6 +119,63 @@ function commitmentQuote() {
   return why.text.trim() || why.cost.trim() || WHY_FALLBACK;
 }
 
+// ---------------------------------------------------------------- who they are
+
+/* Inside the app the name comes from Sign in with Apple and is injected before
+   any script runs. In a browser there is no Sign in with Apple, so the name the
+   user typed during onboarding stands in and the greeting still previews. */
+
+const SESSION_KEY = 'sworn.session';
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s && typeof s === 'object') {
+        return { name: s.name || '', greeted: s.greeted === true };
+      }
+    }
+  } catch (e) {
+    // storage blocked
+  }
+  return { name: '', greeted: false };
+}
+
+function saveSession(s) {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+  } catch (e) {
+    // storage blocked
+  }
+}
+
+function setUserName(name) {
+  const s = loadSession();
+  s.name = (name || '').trim();
+  saveSession(s);
+}
+
+/* Resolved once, at load. The greeting must not change while the app is open —
+   only the next launch turns "Welcome" into "Welcome back". */
+const USER = (() => {
+  const native = typeof window !== 'undefined' ? window.__swornUser : null;
+  if (native && native.name) return { name: native.name, firstRun: native.firstRun === true };
+
+  const s = loadSession();
+  if (!s.name) return { name: '', firstRun: false };
+
+  const firstRun = !s.greeted;
+  if (firstRun) { s.greeted = true; saveSession(s); }
+  return { name: s.name, firstRun };
+})();
+
+/** "Welcome, Vigo" the first time in; "Welcome back, Vigo" ever after. */
+function greeting() {
+  if (!USER.name) return 'SWORN';
+  return `${USER.firstRun ? 'Welcome' : 'Welcome back'}, ${USER.name}`;
+}
+
 // ---------------------------------------------------------------- oaths
 
 /* The scheduled protection windows. Written by onboarding when the user sets

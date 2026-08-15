@@ -1451,3 +1451,15 @@ body { font-family: var(--sf); }
 }
 .iv__secondary:hover { color: rgba(242, 240, 236, .7); }
 .iv__secondary--quiet { font-size: 14px; color: rgba(242, 240, 236, .32); }
+
+/* The wordmark becomes a greeting once we know who they are. */
+.apphead__mark--greet {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -.2px;
+  text-transform: none;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

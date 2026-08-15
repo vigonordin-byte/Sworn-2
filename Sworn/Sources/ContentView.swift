@@ -7,6 +7,7 @@ private let startPage = "home"
 
 struct ContentView: View {
     @StateObject private var screenTime = ScreenTime()
+    @StateObject private var auth = AppleAuth()
 
     private var pickerShown: Binding<Bool> {
         Binding(
@@ -18,10 +19,20 @@ struct ContentView: View {
     }
 
     var body: some View {
-        WebView(page: startPage, screenTime: screenTime)
-            .ignoresSafeArea()
-            .background(Color.black)
-            .task { screenTime.refreshAuthorizationState() }
-            .familyActivityPicker(isPresented: pickerShown, selection: $screenTime.selection)
+        Group {
+            if auth.checking {
+                // A blank hold rather than a flash of the sign-in screen.
+                Color.black.ignoresSafeArea()
+            } else if let session = auth.session {
+                WebView(page: startPage, screenTime: screenTime, session: session)
+                    .ignoresSafeArea()
+                    .background(Color.black)
+                    .task { screenTime.refreshAuthorizationState() }
+                    .familyActivityPicker(isPresented: pickerShown, selection: $screenTime.selection)
+            } else {
+                SignInView(auth: auth)
+            }
+        }
+        .task { await auth.restore() }
     }
 }

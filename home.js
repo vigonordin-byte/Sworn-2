@@ -336,7 +336,7 @@ function homeTab() {
   return `
     <div class="scroll" style="top:var(--safe-top);bottom:var(--nav-h);padding:0">
       <div class="apphead">
-        <div class="apphead__mark">SWORN</div>
+        <div class="apphead__mark${USER.name ? ' apphead__mark--greet' : ''}">${esc(greeting())}</div>
         <button type="button" class="icon-btn" style="width:40px;height:40px" data-act="achievements-open" aria-label="Achievements">
           ${svg(TROPHY, 28, '#fff')}
         </button>

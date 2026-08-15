@@ -8,6 +8,7 @@ import WebKit
 struct WebView: UIViewRepresentable {
     let page: String
     let screenTime: ScreenTime
+    let session: AppleAuth.Session
 
     func makeCoordinator() -> Bridge { Bridge(screenTime: screenTime) }
 
@@ -16,10 +17,10 @@ struct WebView: UIViewRepresentable {
         config.allowsInlineMediaPlayback = true
         config.userContentController.add(context.coordinator, name: "sworn")
 
-        // Tells the web layer a native host is present, before any page script
-        // runs, so it can render the real picker row instead of the mock list.
+        // Tells the web layer a native host is present and who is signed in,
+        // before any page script runs, so the first paint is already correct.
         config.userContentController.addUserScript(WKUserScript(
-            source: "window.__swornNative = true;",
+            source: "window.__swornNative = true; window.__swornUser = \(Self.userJSON(session));",
             injectionTime: .atDocumentStart,
             forMainFrameOnly: true
         ))
@@ -44,6 +45,14 @@ struct WebView: UIViewRepresentable {
     func updateUIView(_ webView: WKWebView, context: Context) {
         // Loaded once in makeUIView; reloading here would restart the app on
         // every SwiftUI update.
+    }
+
+    /// `{ name, firstRun }` — safely encoded, since a name is arbitrary text.
+    private static func userJSON(_ session: AppleAuth.Session) -> String {
+        let payload: [String: Any] = ["name": session.name, "firstRun": session.firstRun]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload),
+              let json = String(data: data, encoding: .utf8) else { return "null" }
+        return json
     }
 
     // MARK: bridge

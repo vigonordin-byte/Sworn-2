@@ -134,6 +134,28 @@ commitment", rather than just collecting settings:
 Step 30 is the real question: do they want this enough to accept the friction?
 Accepting sets `committed` on the record.
 
+## Signing in
+
+Sign in with Apple, gating the whole app. The sign-in screen is rendered
+natively rather than in the webview, because Apple's guidelines require their
+own button.
+
+The thing that matters: **Apple returns the user's name only on the very first
+authorization.** Every sign-in afterwards yields the identifier and nothing
+else, so `AppleAuth` persists the name the moment it arrives or it is lost for
+good. On launch the stored credential is revalidated with
+`getCredentialState`, so revoking access in Settings signs them out properly.
+
+The session is injected into the page before any script runs, as
+`window.__swornUser = { name, firstRun }`, so the first paint is already
+correct. The home header then reads **Welcome, {name}** on the launch straight
+after signing up and **Welcome back, {name}** on every launch after — resolved
+once at load, so it never changes mid-session.
+
+In a browser there is no Sign in with Apple, so the name typed during
+onboarding stands in and the greeting still previews. With no name at all the
+header falls back to the `SWORN` wordmark.
+
 ## The 60 seconds
 
 The core accountability moment. It appears when the user tries to disable an

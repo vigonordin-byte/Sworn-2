@@ -869,6 +869,7 @@ document.getElementById('phone').addEventListener('input', (e) => {
     return;
   }
   S[key] = e.target.value;
+  if (key === 'name') setUserName(e.target.value);
 });
 
 render();
