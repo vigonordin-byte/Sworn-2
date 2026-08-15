@@ -44,6 +44,7 @@ const BEHAVIOR_CONFIG = {
 
     analysis: {
       verdict: 'Your answers point to a real dependence on porn.',
+      verdictMild: 'Your use is milder than most, but the pattern is already forming. This is the easiest point to stop it.',
       symptomsIntro: 'Heavy use has knock-on effects most people never connect to it.'
     },
 
@@ -157,6 +158,7 @@ const BEHAVIOR_CONFIG = {
 
     analysis: {
       verdict: 'Your answers point to gambling that is no longer under your control.',
+      verdictMild: 'Your betting is milder than most, but the pattern is already forming. This is the cheapest point to stop it.',
       symptomsIntro: 'Gambling costs more than money. Most of this is not obvious from the inside.'
     },
 
@@ -255,6 +257,7 @@ const BEHAVIOR_CONFIG = {
 
     analysis: {
       verdict: 'Your answers point to scrolling that is taking more than you realise.',
+      verdictMild: 'You scroll less than most, but the habit is already forming. This is the easiest point to take your attention back.',
       symptomsIntro: 'The cost is spread thin, which is exactly why it is easy to miss.'
     },
 
@@ -332,6 +335,12 @@ const BEHAVIOR_CONFIG = {
 // ---------------------------------------------------------------- accessors
 
 let behaviorCache = null;
+
+/** Forget the choice entirely, e.g. when onboarding starts over. */
+function resetBehavior() {
+  behaviorCache = null;
+  try { localStorage.removeItem(BEHAVIOR_KEY); } catch (e) { /* storage blocked */ }
+}
 
 /** The stored selection, migrating anyone who predates the question. */
 function loadBehavior() {

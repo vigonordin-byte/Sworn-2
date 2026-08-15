@@ -384,6 +384,71 @@ a:hover { color: var(--gold-lt); }
 .opt.is-on .opt__label { color: var(--ink); }
 .opt.is-on .opt__n { background: var(--ink); color: #0a0a0b; }
 
+/* The sheet grammar from the app's Commitments page: rows that expand in
+   place, like editing an alarm. */
+.tile {
+  display: block;
+  width: 100%;
+  padding: 17px 18px;
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
+  border: 0;
+  font-family: inherit;
+  font-size: 14.5px;
+  color: var(--ink);
+  text-align: left;
+}
+button.tile { cursor: pointer; -webkit-appearance: none; appearance: none; }
+
+.tile--row { display: flex; align-items: center; justify-content: space-between; }
+
+.tile__value { display: flex; align-items: center; gap: 8px; font-size: 14.5px; color: rgba(242, 240, 236, .55); }
+.tile__chev { color: rgba(242, 240, 236, .35); transition: transform .2s ease; }
+.tile--row.is-on .tile__chev { transform: rotate(90deg); }
+
+/* An expanded row's editor, joined to the row above it. */
+.tile--sub {
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: #141417;
+}
+
+.time-input {
+  display: block;
+  width: 100%;
+  padding: 12px 10px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 17px;
+  color-scheme: dark;
+  outline: none;
+}
+
+.nights { margin-top: 14px; display: flex; justify-content: space-between; gap: 6px; }
+
+.night {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, .16);
+  color: rgba(242, 240, 236, .5);
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.night.is-on { background: rgba(242, 240, 236, .9); border-color: rgba(242, 240, 236, .9); color: #0f0f11; }
+
 .cta-hold {
   position: relative;
   overflow: hidden;

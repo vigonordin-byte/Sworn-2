@@ -165,9 +165,7 @@ window.SwornDev = (() => {
      "Gambling" and then seed an active commitment as a gambling user. Only the
      two fresh-install presets clear it, since a real fresh install has no
      answer stored either. */
-  function clearBehavior() {
-    try { localStorage.removeItem(BEHAVIOR_KEY); } catch (e) { /* blocked */ }
-  }
+  const clearBehavior = () => resetBehavior();
 
   const BEHAVIOR_STATES = BEHAVIORS.map((id) => ({ id, name: BEHAVIOR_CONFIG[id].choice }));
 

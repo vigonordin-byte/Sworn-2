@@ -32,7 +32,7 @@ const FEATURE_SLIDES = [
 ];
 
 /* Glyphs whose meaning is carried by their colour. */
-const GLYPH_COLOR = { '♥': '#ff453a', '⬡': '#30d158', '⛨': '#ff453a' };
+const GLYPH_COLOR = { '♥': '#ff453a', '⬡': '#30d158', '⛨': '#ff453a', '✦': '#ffd60a' };
 
 const SLIDE_TINTS = [
   'rgba(217,164,65,.22)', 'rgba(200,120,110,.2)', 'rgba(170,130,200,.2)',
@@ -155,12 +155,13 @@ window.sworn = {
 
 const S = {
   step: 0,
+  protSection: null,
   answers: {},
   name: '',
   age: null,
   pct: 0,
   symptoms: [],
-  goals: [0],
+  goals: [],
   referral: '',
   plan: 0
 };
@@ -367,9 +368,7 @@ function analysis() {
   const score = quizScore();
   const typical = typicalScore();
   const diff = score - typical;
-  const verdict = diff >= 0
-    ? B().analysis.verdict
-    : 'Your answers sit below the typical result. What you did report is still worth taking seriously.';
+  const verdict = diff >= 0 ? B().analysis.verdict : B().analysis.verdictMild;
   const compare = diff === 0
     ? 'Right at the typical result'
     : `<span>${Math.abs(diff)} points</span> ${diff > 0 ? 'above' : 'below'} the typical result`;
@@ -653,9 +652,24 @@ function vulnerableScreen() {
 
 /* Their first scheduled protection. The framing matters: this is not a
    punishment, it is them saying "I know I'm vulnerable at these times". */
+/* Laid out like editing an alarm, and like the oath sheet on the Commitments
+   page: rows that expand in place. Nothing is preselected; the CTA waits for
+   both nights and apps. */
 function protectScreen() {
   const p = loadProtect();
-  const ready = NATIVE ? shieldCount > 0 : p.apps.length > 0;
+  const ready = (NATIVE ? shieldCount > 0 : p.apps.length > 0) && p.days.length > 0;
+  const sec = S.protSection;
+  const appsLabel = NATIVE
+    ? (shieldCount ? shieldCount + (shieldCount === 1 ? ' app' : ' apps') : 'None yet')
+    : (p.apps.length ? p.apps.length + (p.apps.length === 1 ? ' app' : ' apps') : 'None yet');
+
+  const row = (label, value, section, act) => `
+    <button type="button" class="tile tile--row${on(sec === section)}" style="margin-top:11px"
+      data-act="${act || 'prot-section'}" data-section="${section}" aria-expanded="${sec === section}">
+      <span style="font-weight:600">${label}</span>
+      <span class="tile__value"><span id="protval-${section}">${esc(value)}</span><span class="tile__chev">›</span></span>
+    </button>`;
+
   return `
     <div class="screen protect anim-rise-fast">
       <div style="padding:0 22px">
@@ -665,42 +679,41 @@ function protectScreen() {
       </div>
 
       <div class="scroll" style="top:186px;bottom:98px">
-        <div class="window-row">
-          <label class="window-cell">
-            <span class="window-cell__label">LOCKS AT</span>
-            <input type="time" class="window-time" data-bind="protectFrom" value="${esc(p.from)}">
-          </label>
-          <span class="window-dash">–</span>
-          <label class="window-cell">
-            <span class="window-cell__label">UNLOCKS AT</span>
-            <input type="time" class="window-time" data-bind="protectTo" value="${esc(p.to)}">
-          </label>
+        ${row('Locks at', p.from, 'from')}
+        ${sec === 'from' ? `
+        <div class="tile tile--sub">
+          <input type="time" class="time-input" data-bind="protectFrom" value="${esc(p.from)}">
+        </div>` : ''}
+
+        ${row('Unlocks at', p.to, 'until')}
+        ${sec === 'until' ? `
+        <div class="tile tile--sub">
+          <input type="time" class="time-input" data-bind="protectTo" value="${esc(p.to)}">
+        </div>` : ''}
+
+        <div class="tile" style="margin-top:11px;padding:18px">
+          <div style="font-size:13px;color:rgba(242,240,236,.55)">On these nights</div>
+          <div class="nights">
+            ${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, i) => `
+              <button type="button" class="night${on(p.days.includes(i))}" data-act="protect-day" data-i="${i}"
+                aria-pressed="${p.days.includes(i)}">${label}</button>`).join('')}
+          </div>
         </div>
 
-        <div class="field-label" style="margin-top:22px">On these nights</div>
-        <div class="nights" style="margin-top:11px">
-          ${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, i) => `
-            <button type="button" class="night${on(p.days.includes(i))}" data-act="protect-day" data-i="${i}"
-              aria-pressed="${p.days.includes(i)}">${label}</button>`).join('')}
-        </div>
-
-        <div class="field-label" style="margin-top:24px">App blocking</div>
-        ${NATIVE ? `
-        <button type="button" class="picker-row" data-act="pick-apps">
-          <span>Choose apps</span>
-          <span class="picker-row__value">${shieldCount ? shieldCount + (shieldCount === 1 ? ' app' : ' apps') : 'None yet'}<span class="chev">›</span></span>
-        </button>
-        ` : `
-        <div style="margin-top:11px;display:flex;flex-direction:column;gap:10px">
+        ${NATIVE
+          ? row('App blocking', appsLabel, 'apps', 'pick-apps')
+          : row('App blocking', appsLabel, 'apps')}
+        ${!NATIVE && sec === 'apps' ? `
+        <div class="tile tile--sub" style="padding:8px;display:flex;flex-direction:column;gap:4px">
           ${B().apps.map((name) => {
-            const sel = p.apps.includes(name);
+            const selApp = p.apps.includes(name);
             return `
-            <button type="button" class="pickrow${on(sel)}" data-act="protect-app" data-app="${esc(name)}" aria-pressed="${sel}">
+            <button type="button" class="pickrow${on(selApp)}" style="border-radius:12px" data-act="protect-app" data-app="${esc(name)}" aria-pressed="${selApp}">
               <span class="dot"></span>
               <span class="pickrow__label">${esc(name)}</span>
             </button>`;
           }).join('')}
-        </div>`}
+        </div>` : ''}
         <div style="height:24px"></div>
       </div>
 
@@ -946,6 +959,11 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'behavior': saveBehavior(BEHAVIORS[i]); return render();
     case 'trigger': toggleWhyTrigger(i); return render();
     case 'reason': toggleWhyReason(i); return render();
+    case 'prot-section': {
+      const sec = el.dataset.section;
+      S.protSection = S.protSection === sec ? null : sec;
+      return render();
+    }
     case 'protect-day': {
       const p = loadProtect();
       const at = p.days.indexOf(i);
@@ -997,9 +1015,12 @@ document.getElementById('phone').addEventListener('input', (e) => {
   if (!key) return;
   if (key === 'protectFrom' || key === 'protectTo') {
     const p = loadProtect();
-    p[key === 'protectFrom' ? 'from' : 'to'] = e.target.value;
+    const field = key === 'protectFrom' ? 'from' : 'to';
+    p[field] = e.target.value;
     saveProtect(p);
-    return render();
+    const label = document.getElementById(field === 'from' ? 'protval-from' : 'protval-until');
+    if (label) label.textContent = e.target.value;
+    return;
   }
   if (key === 'text' || key === 'cost') {
     setWhyField(key, e.target.value);
@@ -1016,4 +1037,17 @@ document.getElementById('phone').addEventListener('input', (e) => {
   if (key === 'name') setUserName(e.target.value);
 });
 
+/* Onboarding always starts blank. The native app only shows this page for a
+   brand-new user or an explicit replay, so anything left in the stores by an
+   earlier or abandoned run would surface as pre-filled answers: reasons
+   already ticked, the cost box already written. Nothing is chosen until the
+   user chooses it. */
+function resetOnboardingState() {
+  saveWhy({ text: '', reasons: [], cost: '', future: '', committed: false, goals: [], triggers: [] });
+  saveProtect({ from: '20:00', to: '23:00', days: [], apps: [] });
+  resetBehavior();
+  whyCache = null;
+}
+
+resetOnboardingState();
 render();

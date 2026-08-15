@@ -78,6 +78,18 @@ enum Shared {
         return try? JSONDecoder().decode(FamilyActivitySelection.self, from: data)
     }
 
+    /// Every stored selection, counted. Keyed by oath id — deliberately not
+    /// limited to synced oaths, because onboarding picks apps before any sync
+    /// has run, and its row must still be able to say "3 apps".
+    static func allSelectionCounts() -> [String: Int] {
+        var out: [String: Int] = [:]
+        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix("selection.") {
+            guard let id = Int(key.dropFirst("selection.".count)) else { continue }
+            out["\(id)"] = selectionCount(for: id)
+        }
+        return out
+    }
+
     /// How many things the user picked. The tokens are opaque, so a count is
     /// the most the UI is allowed to know.
     static func selectionCount(for oathId: Int) -> Int {
