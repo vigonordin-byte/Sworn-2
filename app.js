@@ -3,30 +3,14 @@
 
 // ---------------------------------------------------------------- content
 
-const QUESTIONS = [
-  ['What is your gender?', ['Male', 'Female']],
-  ['How often do you typically view pornography?', ['Less than once a week', 'Once a day', 'A few times a week', 'More than once a day']],
-  ['Where did you hear about us?', ['Instagram', 'TikTok', 'Facebook', 'Google', 'Therapist', 'X']],
-  ['Have you noticed a shift towards more extreme or graphic material?', ['Yes', 'No']],
-  ['At what age did you first come across explicit content?', ['12 or younger', '17 to 24', '25 or older', '13 to 16']],
-  ['Do you find it difficult to achieve sexual arousal without pornography or fantasy?', ['Occasionally', 'Rarely or never', 'Frequently']],
-  ['Do you use pornography as a way to cope with emotional discomfort or pain?', ['Frequently', 'Occasionally', 'Rarely or never']],
-  ['Do you turn to pornography when feeling stressed?', ['Occasionally', 'Rarely or never', 'Frequently']],
-  ['Do you watch pornography out of boredom?', ['Occasionally', 'Rarely or never', 'Frequently']],
-  ['Have you ever spent money on accessing explicit content?', ['Yes', 'No']]
-];
 
-const PROTECT_APPS = ['Reddit', 'X', 'Safari', 'Instagram', 'TikTok', 'YouTube'];
+
+/* Behaviour-specific content lives in behavior.js. */
+const quiz = () => B().quiz;
 
 const AGE_OPTS = ['18–24', '25–34', '35–44', '45+'];
 const CALC_NOTES = ['Understanding responses', 'Weighing your triggers', 'Shaping your oath'];
 
-const SYMPTOM_DEFS = [
-  ['MENTAL', ["Poor memory or 'brain fog'", 'Difficulty concentrating', 'General anxiety', 'Feeling unmotivated', 'Lack of ambition to pursue goals']],
-  ['PHYSICAL', ['Tiredness and lethargy', 'Weak erections without porn', 'Low sex drive or desire']],
-  ['SOCIAL', ['Unsuccessful or unenjoyable sex', 'Feeling isolated from others', 'Reduced desire to socialize', 'Low self-confidence', 'Feeling unattractive or unworthy of love']],
-  ['FAITH', ['Feeling distant from God']]
-];
 
 const GOAL_DEFS = [
   'Come closer to God', 'Improved self-control', 'Stronger relationships',
@@ -37,18 +21,11 @@ const GOAL_DEFS = [
 /* The design had six competing tints. One neutral reads as a set. */
 const GOAL_TINTS = new Array(7).fill('rgba(255,255,255,.10)');
 
-const EDU_SLIDES = [
-  ['PORN IS A DRUG', "Using porn releases a chemical in the brain called dopamine. This chemical makes you feel good – it's why you feel pleasure when you watch porn.", '◉'],
-  ['PORN DESTROYS RELATIONSHIPS', 'Porn reduces your hunger for a real relationship and replaces it with the hunger for more porn.', '♡'],
-  ['PORN SHATTERS SEX DRIVE', 'More than 50% of porn addicts have reported a loss of interest in real sex, and an overall decrease in their sex drive.', '⚥'],
-  ['FEELING UNHAPPY?', 'An elevated dopamine level means you need more dopamine to feel good. This is why so many heavy porn users report feeling depresed, unmotivated, and anti-social.', '◔'],
-  ['PATH TO RECOVERY', 'Recovery is possible. By abstaining from porn, your brain can reset its dopamine sensitivity, leading to healthier relationships and improved well-being.', '❦']
-];
 
 const FEATURE_SLIDES = [
   ['WELCOME TO SWORN', 'With over 2,000,000 users, Sworn is class-leading and based on years of research and user-interaction', '✦', true],
   ['REWIRE YOUR BRAIN', 'Science-backed exercises help you rewire your brain, rebuild your dopamine receptors, and avoid setbacks.', '⬡'],
-  ['STAY MOTIVATED', 'Quitting porn can be challenging. Your daily checkup keeps you motivated as you become your best self.', '☀'],
+  ['STAY MOTIVATED', 'Breaking a habit this stubborn is hard. Your daily checkup keeps you motivated as you become your best self.', '☀'],
   ['AVOID SETBACKS', 'Sworn learns your habits and temptation triggers, providing you with 24/7 protection.', '⛨'],
   ['CONQUER YOURSELF', 'Know yourself to conquer yourself. Understand your strengths and weaknesses, earn medals, and track your progress.', '☖'],
   ['LEVEL UP YOUR LIFE', 'Rebooting has immense psychological and physical benefits. Grow stronger, healthier, and happier.', '❖']
@@ -59,9 +36,10 @@ const SLIDE_TINTS = [
   'rgba(110,150,200,.2)', 'rgba(120,190,150,.2)', 'rgba(217,164,65,.22)'
 ];
 
-const QUOTE_DEFS = [
+/* Two of the three hold for any of the behaviours; the middle one is theirs. */
+const quoteDefs = () => [
   ['Andrew Huberman, Ph.D.', 'Drastically improve your life', 'Resetting your dopamine balance by taking a break from highly stimulating content can dramatically improve motivation, emotional stability, and everyday pleasure.'],
-  ['Steven Bartlett', "There's no good in porn", "Pornography doesn't have an educational role—it's only an open window for a market that brings more emptiness and addiction that profit to porn."],
+  B().quote,
   ['Connor', 'Quitting changed my mindset', 'Quitting has allowed me to change my mindset on the way I see myself, and the people around me.']
 ];
 
@@ -90,32 +68,38 @@ const AVERAGE = 40;
 
 // ---------------------------------------------------------------- step map
 
-const FINALLY = 10;
-const CALCULATING = 11;
-const ANALYSIS = 12;
-const SYMPTOMS = 13;
-const EDU = 14;
-const FEAT = 19;
-const GOALS = 25;
+/* Step 0 is the behaviour question; the quiz runs from QUIZ_START. Everything
+   downstream reads its copy from behavior.js rather than branching. */
+const BEHAVIOR = 0;
+const QUIZ_START = 1;
+
+const FINALLY = 11;
+const CALCULATING = 12;
+const ANALYSIS = 13;
+const SYMPTOMS = 14;
+const EDU = 15;
+const FEAT = 20;
+const GOALS = 26;
 
 /* The commitment arc: why → what it cost → what changes → read it back →
    accept the friction. This is the part that turns "I want to stop" into
    "I'm making a commitment". */
-const WHY = 26;
-const REALIZE = 27;
-const COST = 28;
-const FUTURE = 29;
-const REFLECT = 30;
-const COMMIT = 31;
-const PROTECT = 32;
+const WHY = 27;
+const REALIZE = 28;
+const COST = 29;
+const FUTURE = 30;
+const REFLECT = 31;
+const COMMIT = 32;
+const VULNERABLE = 33;
+const PROTECT = 34;
 
-const BENEFITS = 33;
-const PATH = 34;
-const RATING = 35;
-const REFERRAL = 36;
-const NOTIFY = 37;
-const READY = 38;
-const PAYWALL = 39;
+const BENEFITS = 35;
+const PATH = 36;
+const RATING = 37;
+const REFERRAL = 38;
+const NOTIFY = 39;
+const READY = 40;
+const PAYWALL = 41;
 
 // ---------------------------------------------------------------- native bridge
 
@@ -178,7 +162,7 @@ const on = (cond) => (cond ? ' is-on' : '');
 
 /** Which carousel, if any, the current step falls inside. */
 function slideSet() {
-  if (S.step >= EDU && S.step < FEAT) return { set: EDU_SLIDES, base: EDU, edu: true };
+  if (S.step >= EDU && S.step < FEAT) return { set: B().slides, base: EDU, edu: true };
   if (S.step >= FEAT && S.step < GOALS) return { set: FEATURE_SLIDES, base: FEAT, edu: false };
   return null;
 }
@@ -237,12 +221,12 @@ function paintRing() {
 
 function pickOption(i) {
   const from = S.step;
-  S.answers[from] = QUESTIONS[from][1][i];
+  S.answers[from] = quiz()[from - QUIZ_START][1][i];
   render();
   // Let the selected state land before advancing.
   setTimeout(() => {
     if (S.step !== from) return;
-    go(from >= QUESTIONS.length - 1 ? FINALLY : from + 1);
+    go(from >= QUIZ_START + quiz().length - 1 ? FINALLY : from + 1);
   }, 190);
 }
 
@@ -256,7 +240,7 @@ function toggle(list, value) {
 
 function renderChrome() {
   if (S.step > FINALLY) return '';
-  const progress = Math.round(((Math.min(S.step, FINALLY) + 1) / 12) * 100);
+  const progress = Math.round((Math.min(S.step, FINALLY) / FINALLY) * 100);
   return `
     <div class="chrome">
       <button type="button" class="chrome__back" data-act="back" aria-label="Go back">${CHEVRON(22)}</button>
@@ -268,11 +252,40 @@ function renderChrome() {
     </div>`;
 }
 
+/* The first thing we ask, because everything after it is phrased in terms of
+   the answer. Selecting does not auto-advance — this one is worth re-reading
+   before committing to it. */
+function behaviorScreen() {
+  const current = behaviorChosen() ? loadBehavior() : null;
+  return `
+    <div class="screen q anim-rise-fast">
+      <div class="eyebrow">FIRST</div>
+      <div class="q__text" id="qtext">What do you want Sworn to help you stop?</div>
+      <div class="q__options" role="radiogroup" aria-labelledby="qtext" style="margin-top:26px">
+        ${BEHAVIORS.map((id, i) => {
+          const cfg = BEHAVIOR_CONFIG[id];
+          const sel = current === id;
+          return `
+          <button type="button" class="opt opt--tall${on(sel)}" data-act="behavior" data-i="${i}"
+            role="radio" aria-checked="${sel}">
+            <span class="opt__n">${i + 1}</span>
+            <span class="opt__stack">
+              <span class="opt__label">${esc(cfg.choice)}</span>
+              <span class="opt__note">${esc(cfg.choiceNote)}</span>
+            </span>
+          </button>`;
+        }).join('')}
+      </div>
+      <button class="cta${current ? '' : ' cta--muted'}" style="margin-top:auto"
+        data-act="next"${current ? '' : ' disabled'}>Continue</button>
+    </div>`;
+}
+
 function question() {
-  const [text, options] = QUESTIONS[S.step];
+  const [text, options] = quiz()[S.step - QUIZ_START];
   return `
     <div class="screen q">
-      <div class="eyebrow">QUESTION #${S.step + 1}</div>
+      <div class="eyebrow">QUESTION #${S.step - QUIZ_START + 1}</div>
       <div class="q__text" id="qtext">${esc(text)}</div>
       <div class="q__options" role="radiogroup" aria-labelledby="qtext">
         ${options.map((label, i) => `
@@ -330,7 +343,7 @@ function analysis() {
       <div class="serif" style="margin-top:11px;font-size:21px;color:rgba(242,240,236,.55);text-wrap:pretty">We've got some news to break to you...</div>
 
       <div class="card" style="margin-top:18px;padding:18px 16px 14px;border-radius:22px">
-        <div style="text-align:center;font-size:14px;line-height:1.45;color:rgba(242,240,236,.72);text-wrap:pretty">Your responses indicate a clear dependance on internet pornography.</div>
+        <div style="text-align:center;font-size:14px;line-height:1.45;color:rgba(242,240,236,.72);text-wrap:pretty">${esc(B().analysis.verdict)}</div>
         <div class="bars">
           <div class="bar-col">
             <div class="bar-you">${SCORE}%</div>
@@ -343,7 +356,7 @@ function analysis() {
         </div>
       </div>
 
-      <div style="margin-top:16px;text-align:center;font-size:15px;font-weight:600"><span>${SCORE}%</span> higher dependence on porn</div>
+      <div style="margin-top:16px;text-align:center;font-size:15px;font-weight:600"><span>${SCORE}%</span> ${esc(B().analysis.compare)}</div>
       <div style="margin-top:8px;text-align:center;font-size:11.5px;color:rgba(242,240,236,.35);line-height:1.5">* This result is an indication only, not a medical diagnosis.</div>
       <button class="cta cta--glow" style="margin-top:auto;" data-act="next">Check your symptoms</button>
     </div>`;
@@ -357,9 +370,9 @@ function symptoms() {
         <div class="topbar__title">SYMPTOMS</div>
       </div>
       <div class="scroll" style="top:54px;bottom:98px">
-        <div class="banner">Excessive porn use can have negative impacts psychologically.</div>
+        <div class="banner">${esc(B().analysis.symptomsIntro)}</div>
         <div class="serif" style="margin-top:20px;font-size:22px">Select any symptoms below:</div>
-        ${SYMPTOM_DEFS.map(([name, items], gi) => `
+        ${B().symptoms.map(([name, items], gi) => `
           <div class="group-name" id="sym${gi}">${esc(name)}</div>
           <div class="group-items" role="group" aria-labelledby="sym${gi}">
             ${items.map((label, ii) => {
@@ -449,7 +462,7 @@ function whyScreen() {
       </div>
       <div class="scroll" style="top:186px;bottom:98px">
         <div style="display:flex;flex-direction:column;gap:10px" role="group" aria-label="Reasons">
-          ${WHY_REASONS.map((label, i) => {
+          ${reasonLabels().map((label, i) => {
             const sel = why.reasons.includes(i);
             return `
             <button type="button" class="pickrow${on(sel)}" data-act="reason" data-i="${i}" aria-pressed="${sel}">
@@ -565,6 +578,37 @@ function commitScreen() {
     </div>`;
 }
 
+/* Named before the schedule, so the times they pick next are an answer to
+   something they just said rather than a blank clock. */
+function vulnerableScreen() {
+  const picked = loadWhy().triggers;
+  const opts = B().vulnerable;
+  return `
+    <div class="screen why anim-rise-fast">
+      <div class="topbar" style="padding:0 22px">
+        ${backCircle()}
+        <div class="topbar__title">WHEN IS IT HARDEST?</div>
+      </div>
+      <div class="scroll" style="top:54px;bottom:98px">
+        <div class="serif" style="font-size:20px;color:rgba(242,240,236,.55);text-wrap:pretty">Pick the moments it usually happens. Sworn protects those first.</div>
+        <div style="margin-top:18px;display:flex;flex-direction:column;gap:10px">
+          ${opts.map((label, i) => {
+            const sel = picked.includes(i);
+            return `
+            <button type="button" class="pickrow${on(sel)}" data-act="trigger" data-i="${i}" aria-pressed="${sel}">
+              <span class="dot"></span>
+              <span class="pickrow__label">${esc(label)}</span>
+            </button>`;
+          }).join('')}
+        </div>
+        <div style="height:24px"></div>
+      </div>
+      <div class="footer-bar">
+        <button class="cta${picked.length ? '' : ' cta--muted'}" data-act="next"${picked.length ? '' : ' disabled'}>Continue</button>
+      </div>
+    </div>`;
+}
+
 /* Their first scheduled protection. The framing matters: this is not a
    punishment, it is them saying "I know I'm vulnerable at these times". */
 function protectScreen() {
@@ -573,8 +617,8 @@ function protectScreen() {
     <div class="screen protect anim-rise-fast">
       <div style="padding:0 22px">
         ${backCircle()}
-        <div style="margin-top:16px;font-size:24px;font-weight:700;letter-spacing:4px;line-height:1.15">WHEN ARE YOU VULNERABLE?</div>
-        <div class="serif" style="margin-top:12px;font-size:20px;color:rgba(242,240,236,.55);text-wrap:pretty">“I know I'm vulnerable at these times.”</div>
+        <div style="margin-top:16px;font-size:24px;font-weight:700;letter-spacing:4px;line-height:1.15">SET YOUR PROTECTION</div>
+        <div class="serif" style="margin-top:12px;font-size:20px;color:rgba(242,240,236,.55);text-wrap:pretty">${esc(B().commitLine)}</div>
       </div>
 
       <div class="scroll" style="top:196px;bottom:98px">
@@ -608,7 +652,7 @@ function protectScreen() {
         <div class="picker-note">Uses Apple's own picker, so Sworn never learns which apps you chose.</div>
         ` : `
         <div style="margin-top:11px;display:flex;flex-direction:column;gap:10px">
-          ${PROTECT_APPS.map((name) => {
+          ${B().apps.map((name) => {
             const sel = p.apps.includes(name);
             return `
             <button type="button" class="pickrow${on(sel)}" data-act="protect-app" data-app="${esc(name)}" aria-pressed="${sel}">
@@ -643,7 +687,7 @@ function benefits() {
         <div class="topbar__title">REWIRING BENEFITS</div>
       </div>
       <div class="scroll" style="top:54px;bottom:98px">
-        ${QUOTE_DEFS.map(([name, head, body]) => `
+        ${quoteDefs().map(([name, head, body]) => `
           <div class="quote-head">
             <div class="avatar"></div>
             <div style="font-size:16px;font-weight:700">${esc(name)}</div>
@@ -685,7 +729,7 @@ function path() {
       <div class="legend">
         <span><span class="swatch" style="background:#e7bc6a"></span>With Sworn</span>
         <span class="dim"><span class="swatch" style="background:#8f8f96"></span>Without</span>
-        <span class="dim">✕ Relapses</span>
+        <span class="dim">✕ Setbacks</span>
       </div>
       <button class="cta" style="margin-top:auto" data-act="next">Continue</button>
     </div>`;
@@ -738,7 +782,7 @@ function notify() {
       <div style="align-self:flex-start">${backCircle()}</div>
       <div style="margin-top:120px">${BELL}</div>
       <div style="margin-top:40px;text-align:center;font-size:25px;font-weight:700;letter-spacing:3.8px;line-height:1.2">STAY ON TRACK WITH REMINDERS</div>
-      <div class="serif" style="margin-top:18px;text-align:center;font-size:20px;line-height:1.4;color:rgba(242,240,236,.55);text-wrap:pretty">Get gentle reminders and motivation so you never lose sight of your goals.</div>
+      <div class="serif" style="margin-top:18px;text-align:center;font-size:20px;line-height:1.4;color:rgba(242,240,236,.55);text-wrap:pretty">${esc(B().notifyLine)}</div>
       <button class="cta cta--glow" style="margin-top:auto;letter-spacing:2.4px" data-act="next">Enable notifications</button>
       <button type="button" class="notlater" data-act="next">Not now</button>
     </div>`;
@@ -804,7 +848,8 @@ function paywall() {
 
 function screenHtml() {
   const step = S.step;
-  if (step < QUESTIONS.length) return question();
+  if (step === BEHAVIOR) return behaviorScreen();
+  if (step >= QUIZ_START && step < QUIZ_START + quiz().length) return question();
   if (step === FINALLY) return finallyScreen();
   if (step === CALCULATING) return calculating();
   if (step === ANALYSIS) return analysis();
@@ -821,6 +866,7 @@ function screenHtml() {
     case FUTURE: return futureScreen();
     case REFLECT: return reflectScreen();
     case COMMIT: return commitScreen();
+    case VULNERABLE: return vulnerableScreen();
     case PROTECT: return protectScreen();
     case BENEFITS: return benefits();
     case PATH: return path();
@@ -858,6 +904,8 @@ document.getElementById('phone').addEventListener('click', (e) => {
       toggle(S.goals, i);
       setWhyField('goals', S.goals.slice());
       return render();
+    case 'behavior': saveBehavior(BEHAVIORS[i]); return render();
+    case 'trigger': toggleWhyTrigger(i); return render();
     case 'reason': toggleWhyReason(i); return render();
     case 'commit': setWhyField('committed', true); return next();
     case 'protect-day': {

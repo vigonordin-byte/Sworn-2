@@ -47,6 +47,7 @@ window.SwornDev = (() => {
       note: 'Fresh install. No commitment, no data, onboarding from screen one.',
       apply() {
         clearWeb();
+        clearBehavior();
         saveProgress({ daysSworn: 0 });
         saveStats(STATS_EMPTY);
         native({ action: 'devOnboarded', value: false });
@@ -112,6 +113,7 @@ window.SwornDev = (() => {
       destructive: true,
       apply() {
         clearWeb();
+        clearBehavior();
         saveProgress({ daysSworn: 0 });
         saveStats(STATS_EMPTY);
         native({ action: 'devReset' });
@@ -157,6 +159,23 @@ window.SwornDev = (() => {
     }
   }
 
+  // ---- behaviour -----------------------------------------------------------
+
+  /* The one thing a preset must not silently reset: you need to be able to pick
+     "Gambling" and then seed an active commitment as a gambling user. Only the
+     two fresh-install presets clear it, since a real fresh install has no
+     answer stored either. */
+  function clearBehavior() {
+    try { localStorage.removeItem(BEHAVIOR_KEY); } catch (e) { /* blocked */ }
+  }
+
+  const BEHAVIOR_STATES = BEHAVIORS.map((id) => ({ id, name: BEHAVIOR_CONFIG[id].choice }));
+
+  function setBehavior(id) {
+    saveBehavior(id);
+    render();
+  }
+
   // ---- countdown shortcuts -------------------------------------------------
 
   const DURATION_KEY = 'sworn.dev.duration';
@@ -194,5 +213,6 @@ window.SwornDev = (() => {
     paintCount();
   }
 
-  return { STATES, apply, runPending, duration, setDuration, DURATIONS, STAGES, jumpTo };
+  return { STATES, apply, runPending, duration, setDuration, DURATIONS, STAGES, jumpTo,
+           BEHAVIOR_STATES, setBehavior, current: loadBehavior, chosen: behaviorChosen };
 })();

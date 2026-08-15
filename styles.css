@@ -357,6 +357,29 @@ a:hover { color: var(--gold-lt); }
   font-weight: 500;
 }
 
+/* The behaviour question carries a line of explanation under each choice, so
+   the pill grows into a rounded card rather than staying a single-line row. */
+.opt--tall {
+  align-items: flex-start;
+  border-radius: 20px;
+  padding: 16px;
+}
+.opt--tall .opt__n { margin-top: 1px; }
+
+.opt__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.opt__note {
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(242, 240, 236, .45);
+  text-wrap: pretty;
+}
+.opt.is-on .opt__note { color: rgba(242, 240, 236, .62); }
+
 .opt.is-on { background: var(--card-on); border-color: rgba(242, 240, 236, .28); }
 .opt.is-on .opt__label { color: var(--ink); }
 .opt.is-on .opt__n { background: var(--ink); color: #0a0a0b; }

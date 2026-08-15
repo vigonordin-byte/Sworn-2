@@ -18,7 +18,7 @@ const TIER_COPY = [
   'Bronze is where every oath starts. The first days are the loudest — urges arrive without warning and your own reasoning turns against you. Nothing is expected of you here except that you keep showing up.',
   'By five days the noise begins to settle. Sleep improves, focus returns in short stretches, and the urge stops feeling like an emergency. Silver marks the point where the habit is no longer running the day.',
   'Ten days is where most attempts have already ended. Gold is earned by the ordinary work of keeping your locks in place and answering honestly at your checkup. Confidence stops being a feeling and becomes evidence.',
-  'A month changes the baseline. Diamond means the reward circuits have had real time to recalibrate — energy, drive and attention return to something closer to their natural level, and relapse becomes a decision rather than a reflex.',
+  'A month changes the baseline. Diamond means the reward circuits have had real time to recalibrate — energy, drive and attention return to something closer to their natural level, and giving in becomes a decision rather than a reflex.',
   'A hundred days is no longer a streak, it is how you live. Eternal is the last tier because there is nothing beyond it to chase: the oath has become ordinary, and that is the whole point.'
 ];
 
@@ -160,7 +160,7 @@ function tierView(i) {
     glow: `radial-gradient(circle, ${d.accent}4d 0%, rgba(0,0,0,0) 68%)`,
     ring: `conic-gradient(from 0deg, ${d.a1}, ${d.a2}22 22%, ${d.a1}cc 48%, ${d.a2}22 72%, ${d.a1})`,
     big: isCur ? S.daysSworn : earned ? (d.next || d.at) : d.at,
-    caption: isCur ? 'DAYS SWORN' : earned ? 'DAYS CLEARED' : 'DAYS REQUIRED',
+    caption: isCur ? B().streakLabel : earned ? 'DAYS CLEARED' : 'DAYS REQUIRED',
     numShadow: `0 2px 26px ${d.accent}66`
   };
 }
@@ -403,7 +403,7 @@ function whyPage() {
       </div>` : `
       <div class="why-label">Remember why you are doing this</div>
       <div class="why-quote">“${esc(whyText())}”</div>
-      ${picked.length ? `<div class="why-chips">${picked.map((i) => `<span>${esc(WHY_REASONS[i])}</span>`).join('')}</div>` : ''}
+      ${picked.length ? `<div class="why-chips">${picked.map((i) => `<span>${esc(reasonLabels()[i])}</span>`).join('')}</div>` : ''}
       <div class="why-meta">Written the night you took the oath, ${S.daysSworn} days ago.</div>
       <div class="why-rule"></div>
       <button type="button" class="pill-btn pill-btn--plain" data-act="why-edit">Edit my why</button>`;
@@ -465,7 +465,7 @@ function achievements() {
                 ${i === cur ? '<div class="tl__now">NOW</div>' : ''}
               </div>
               <div class="tl__req">${d.at === 0 ? 'From the day you swear' : d.at + ' days sworn'}</div>
-              <div class="tl__copy">${esc(TIER_COPY[i])}</div>
+              <div class="tl__copy"><b style="color:rgba(242,240,236,.86);font-weight:600">${esc(B().tierLines[i])}</b> ${esc(TIER_COPY[i])}</div>
             </div>
           </div>`;
         }).join('')}
@@ -518,12 +518,12 @@ function stageBody(stage) {
 
     case 'act':
       return `
-        <div class="iv__lead">Don't sit here fighting the urge.</div>
+        <div class="iv__lead">Don't sit here fighting it.</div>
         <div class="iv__action">${esc(S.ivAction)}</div>`;
 
     default:
       return `
-        <div class="iv__decide">The urge will pass.</div>
+        <div class="iv__decide">${esc(B().interventionLine)}</div>
         <div class="iv__decide iv__decide--soft">What do you want to choose?</div>`;
   }
 }
@@ -557,7 +557,7 @@ function intervention() {
       <div class="intervene intervene--won">
         <div class="won__ring">${svg(SHIELD_CHECK, 40, '#34c759', 1.8)}</div>
         <div class="won__title">PROTECTION ACTIVATED</div>
-        <div class="won__body">You noticed the urge. That's exactly what Sworn is for.</div>
+        <div class="won__body">${esc(B().tempted)}</div>
         <div class="won__card">
           <div class="won__label">YOUR PROTECTED APPS ARE BLOCKED</div>
           <div class="won__until">Until ${urgeUntilLabel()}</div>
@@ -602,7 +602,7 @@ function lapseScreen() {
       <div class="lapse__title">You gave in.</div>
       <div class="lapse__said">You said:</div>
       <div class="lapse__quote">“${esc(whyText())}”</div>
-      <div class="lapse__ask">What happened?</div>
+      <div class="lapse__ask">${esc(B().failureLine)}</div>
       <textarea class="why-edit" id="lapsenote" placeholder="Optional. Only you ever see this."></textarea>
       <button type="button" class="cta-gold" style="margin-top:auto" data-act="again">START AGAIN</button>
       <div class="lapse__foot">Nothing is taken away. Your commitment still stands.</div>
@@ -700,7 +700,7 @@ function analyticsTab() {
       <button type="button" class="card an-card${on(S.card === 3)}" style="margin-top:16px" data-act="card" data-card="3" aria-expanded="${S.card === 3}">
         <span style="display:flex;align-items:center;justify-content:space-between;gap:12px">
           <span style="display:block">
-            <span class="an-card__label" style="display:block">Temptations resisted</span>
+            <span class="an-card__label" style="display:block">${esc(B().resistedLabel)}</span>
             <span style="display:flex;margin-top:7px;align-items:baseline;gap:9px">
               <span class="an-card__big">${STATS.resisted}</span>
               <span style="font-size:13px;color:rgba(235,235,245,.45)">of ${STATS.attempts}</span>
@@ -1092,6 +1092,15 @@ function devPage() {
             </button>`).join('')}
         </div>
 
+        <div class="group-label" style="margin:26px 0 0">TEST BEHAVIOR</div>
+        <div class="group" style="margin:12px 0 0;padding:14px">
+          <div class="dev-note" style="margin:0 0 12px">Switches every adaptive screen without redoing onboarding.${SwornDev.chosen() ? '' : ' Not yet answered — defaulting.'}</div>
+          <div class="dev-chips">
+            ${SwornDev.BEHAVIOR_STATES.map((b) => `
+              <button type="button" class="dev-chip${on(SwornDev.current() === b.id)}" data-act="dev-behavior" data-id="${b.id}">${esc(b.name)}</button>`).join('')}
+          </div>
+        </div>
+
         <div class="group-label" style="margin:26px 0 0">COUNTDOWN</div>
         <div class="group" style="margin:12px 0 0;padding:14px">
           <div class="dev-note" style="margin:0 0 12px">Shorten the 60 seconds while testing.</div>
@@ -1359,6 +1368,7 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'dev-open': S.devOpen = true; return render();
     case 'dev-close': S.devOpen = false; return render();
     case 'dev-state': return SwornDev.apply(el.dataset.id);
+    case 'dev-behavior': return SwornDev.setBehavior(el.dataset.id);
     case 'dev-duration': SwornDev.setDuration(Number(el.dataset.secs)); return render();
     case 'dev-stage':
       S.devOpen = false;

@@ -9,67 +9,21 @@ const WHY_KEY = 'sworn.why';
 /** Stands in until the user writes their own. */
 const WHY_FALLBACK = 'I want to control my impulses instead of being controlled by them.';
 
-/* Trimmed to the distinct ones. The three dropped — becoming a better version
-   of myself, living by my values, not being controlled by urges — all overlap
-   discipline, faith or losing control, and made the list feel like a survey. */
-const WHY_REASONS = [
-  'Religious beliefs',
-  'I feel disgusted afterward',
-  'It makes me feel depressed',
-  "I feel like I'm losing control",
-  'It hurts my confidence',
-  'It wastes my time',
-  'It affects my relationships',
-  'I want more discipline'
-];
-
-/* One realization per reason, in the same order as WHY_REASONS. Each takes what
-   the user already told us and turns it back into something confronting — not
-   a lecture, and never shame. Shown once in onboarding, before they commit. */
-const REALIZATIONS = [
-  // Religious beliefs
-  ['You already know what you believe.',
-   "The difficult part isn't knowing. It's choosing it when temptation comes."],
-
-  // I feel disgusted afterward
-  ['You already know how this ends.',
-   'The urge lasts minutes. The regret lasts much longer. Don’t trade what you actually want for what you want right now.'],
-
-  // It makes me feel depressed
-  ['How many times have you promised yourself it would be the last?',
-   "You don't need another promise. You need a system that helps you keep this one."],
-
-  // I feel like I'm losing control
-  ["Control isn't a feeling. It's a decision you already made.",
-   'You decided once, calmly, with a clear head. The urge will argue otherwise. Sworn holds you to the version of you that decided.'],
-
-  // It hurts my confidence
-  ['Confidence is built from evidence.',
-   'Not from motivation, not from a good week — from times you said you would do something and then did it. Every one you keep is proof.'],
-
-  // It wastes my time
-  ['You are not short of time. You are short of the hours it takes.',
-   'An evening is always traded for something. Decide now what yours is worth, while it is still yours to decide.'],
-
-  // It affects my relationships
-  ["It doesn't stay private.",
-   'It shows up as distance, as being half-present, as attention that went somewhere else first. The people closest to you feel it before they can name it.'],
-
-  // I want more discipline
-  ['Imagine who you could become.',
-   "Every time you give in, you're reinforcing the habit you're trying to escape. Every time you resist, you're practicing the person you want to become. This isn't about one night — it's about who you're becoming."]
-];
+/* Reasons and realizations are behaviour-specific and live in behavior.js.
+   These accessors keep every caller unaware of which behaviour is selected. */
+function reasonLabels() { return B().reasons; }
+function realizationsFor() { return B().realizations; }
 
 const REALIZATION_FALLBACK = [
   'Wanting to stop is not the same as stopping.',
   "You've wanted to before. What changes it isn't more wanting — it's something standing in the way at the moment it counts."
 ];
 
-/** The realization for the first reason they picked. */
+/** The realization for the first reason they picked, in their behaviour. */
 function realization() {
   const picked = loadWhy().reasons;
   const first = picked.length ? picked[0] : -1;
-  return REALIZATIONS[first] || REALIZATION_FALLBACK;
+  return realizationsFor()[first] || REALIZATION_FALLBACK;
 }
 
 /* Storage can be unavailable on some file:// origins, so everything falls back
@@ -91,6 +45,8 @@ function loadWhy() {
   if (typeof whyCache.cost !== 'string') whyCache.cost = '';
   if (typeof whyCache.future !== 'string') whyCache.future = '';
   if (typeof whyCache.committed !== 'boolean') whyCache.committed = false;
+  // The moments they named as risky, as indexes into the behaviour's list.
+  if (!Array.isArray(whyCache.triggers)) whyCache.triggers = [];
   if (!Array.isArray(whyCache.goals)) whyCache.goals = [];
   return whyCache;
 }
@@ -105,12 +61,13 @@ function setWhyField(field, value) {
 /* Faith mode used to be a switch in Settings. It is now inferred: if someone
    names religious belief as their reason, or picks "Come closer to God" as a
    goal, scripture belongs in their intervention. Asking twice was clutter. */
-const FAITH_REASON = 0;   // 'Religious beliefs'
 const FAITH_GOAL = 0;     // 'Come closer to God'
 
 function faithMode() {
   const why = loadWhy();
-  return why.reasons.includes(FAITH_REASON) || why.goals.includes(FAITH_GOAL);
+  const faithReason = B().faithReason;
+  const byReason = faithReason !== null && why.reasons.includes(faithReason);
+  return byReason || why.goals.includes(FAITH_GOAL);
 }
 
 /** The line to read back to them. Their why, else the cost, else the stand-in. */
@@ -342,6 +299,7 @@ function exportRecord() {
   const oaths = loadOaths() || [];
   const lines = [
     'SWORN — my record',
+    'Stopping: ' + B().choice,
     new Date().toLocaleString(),
     '',
     'WHY',
@@ -354,7 +312,7 @@ function exportRecord() {
     why.future || '(not written)',
     '',
     'REASONS',
-    ...(why.reasons.length ? why.reasons.map((i) => '- ' + WHY_REASONS[i]) : ['(none picked)']),
+    ...(why.reasons.length ? why.reasons.map((i) => '- ' + reasonLabels()[i]) : ['(none picked)']),
     '',
     'DAYS SWORN',
     String(loadProgress().daysSworn),
@@ -458,9 +416,16 @@ function whyText() {
   return loadWhy().text.trim() || WHY_FALLBACK;
 }
 
-/** Indices into WHY_REASONS that the user picked. */
+/** Indices into the behaviour's reason list that the user picked. */
 function whyReasons() {
   return loadWhy().reasons;
+}
+
+function toggleWhyTrigger(i) {
+  const why = loadWhy();
+  const at = why.triggers.indexOf(i);
+  if (at === -1) why.triggers.push(i); else why.triggers.splice(at, 1);
+  saveWhy(why);
 }
 
 function toggleWhyReason(i) {

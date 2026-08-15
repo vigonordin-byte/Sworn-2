@@ -25,6 +25,7 @@ targets:
         buildPhase: resources
       - path: ../home.html
         buildPhase: resources
+      - path: ../behavior.js
       - path: ../why.js
         buildPhase: resources
       # DEBUG only — excluded from the Release bundle below.
