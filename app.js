@@ -97,13 +97,14 @@ const SYMPTOMS = 13;
 const EDU = 14;
 const FEAT = 19;
 const GOALS = 25;
-const BENEFITS = 26;
-const PATH = 27;
-const RATING = 28;
-const REFERRAL = 29;
-const NOTIFY = 30;
-const READY = 31;
-const PAYWALL = 32;
+const WHY = 26;
+const BENEFITS = 27;
+const PATH = 28;
+const RATING = 29;
+const REFERRAL = 30;
+const NOTIFY = 31;
+const READY = 32;
+const PAYWALL = 33;
 
 // ---------------------------------------------------------------- state
 
@@ -393,6 +394,37 @@ function goals() {
     </div>`;
 }
 
+function whyScreen() {
+  const why = loadWhy();
+  return `
+    <div class="screen why anim-rise-fast">
+      <div style="padding:0 22px">
+        ${backCircle()}
+        <div style="margin-top:16px;font-size:24px;font-weight:700;letter-spacing:4px;line-height:1.15">WHY DO YOU WANT TO STOP?</div>
+        <div class="serif" style="margin-top:12px;font-size:20px;color:rgba(242,240,236,.55);text-wrap:pretty">Sworn reads this back to you the moment you're tempted.</div>
+      </div>
+      <div class="scroll" style="top:186px;bottom:98px">
+        <div style="display:flex;flex-direction:column;gap:10px" role="group" aria-label="Reasons">
+          ${WHY_REASONS.map((label, i) => {
+            const sel = why.reasons.includes(i);
+            return `
+            <button type="button" class="pickrow${on(sel)}" data-act="reason" data-i="${i}" aria-pressed="${sel}">
+              <span class="dot"></span>
+              <span class="pickrow__label">${esc(label)}</span>
+            </button>`;
+          }).join('')}
+        </div>
+        <label class="field-label" style="display:block;margin-top:26px" for="whytext">In your own words</label>
+        <textarea class="field field--area" style="margin-top:9px" id="whytext" data-bind="whyText"
+          placeholder="I don't want to waste another year of my life doing this.">${esc(why.text)}</textarea>
+        <div style="height:24px"></div>
+      </div>
+      <div class="footer-bar">
+        <button class="cta cta--glow" style="font-size:14px;letter-spacing:2.6px" data-act="next">SAVE MY WHY →</button>
+      </div>
+    </div>`;
+}
+
 function benefits() {
   return `
     <div class="screen benefits anim-rise-fast">
@@ -575,6 +607,7 @@ function screenHtml() {
 
   switch (step) {
     case GOALS: return goals();
+    case WHY: return whyScreen();
     case BENEFITS: return benefits();
     case PATH: return path();
     case RATING: return rating();
@@ -607,6 +640,7 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'age': S.age = AGE_OPTS[i]; return render();
     case 'symptom': return toggle(S.symptoms, el.dataset.key);
     case 'goal': return toggle(S.goals, i);
+    case 'reason': toggleWhyReason(i); return render();
     case 'slide': return go(i);
     case 'plan': S.plan = i; return render();
   }
@@ -615,7 +649,13 @@ document.getElementById('phone').addEventListener('click', (e) => {
 // Text fields feed state without a re-render, so typing never loses the caret.
 document.getElementById('phone').addEventListener('input', (e) => {
   const key = e.target.dataset.bind;
-  if (key) S[key] = e.target.value;
+  if (!key) return;
+  if (key === 'whyText') {
+    const why = loadWhy();
+    why.text = e.target.value;
+    return saveWhy(why);
+  }
+  S[key] = e.target.value;
 });
 
 render();

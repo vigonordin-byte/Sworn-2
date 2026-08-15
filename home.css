@@ -21,7 +21,11 @@
 /* v2 drops the web fonts for the system stack. */
 body { font-family: var(--sf); }
 .stage { background: #141416; }
-.phone { color: var(--ink); }
+
+.phone {
+  color: var(--ink);
+  --nav-h: calc(52px + max(26px, var(--safe-bottom)));
+}
 
 @keyframes sealbreath {
   0%, 100% { transform: scale(1); opacity: .85; }
@@ -158,7 +162,7 @@ body { font-family: var(--sf); }
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 14px 30px 26px;
+  padding: 14px 30px max(26px, var(--safe-bottom));
   display: flex;
   justify-content: space-between;
   background: rgba(18, 18, 20, .86);
@@ -517,7 +521,8 @@ body { font-family: var(--sf); }
 
 /* ---------------------------------------------------------------- achievements */
 
-.ach {
+/* Full-screen page pushed over the tabs — achievements, my why. */
+.page {
   position: absolute;
   inset: 0;
   z-index: 9;
@@ -525,27 +530,80 @@ body { font-family: var(--sf); }
   animation: rise .28s ease both;
 }
 
-.ach__head {
+.page__head {
   position: relative;
-  padding: 16px 22px 0;
+  padding: calc(16px + var(--safe-top)) 22px 0;
   display: flex;
   align-items: center;
   gap: 14px;
 }
 
-.ach__title { font-size: 19px; font-weight: 700; letter-spacing: 3.4px; }
+.page__title { font-size: 19px; font-weight: 700; letter-spacing: 3.4px; }
 
-.ach__list {
+.page__body {
   position: absolute;
   left: 0;
   right: 0;
-  top: 104px;
+  top: calc(60px + var(--safe-top));
   bottom: 0;
   overflow-y: auto;
   scrollbar-width: none;
   padding: 8px 22px 40px;
 }
-.ach__list::-webkit-scrollbar { display: none; }
+.page__body::-webkit-scrollbar { display: none; }
+
+/* my why */
+
+.why-label { font-size: 13px; color: rgba(235, 235, 245, .6); }
+
+.why-quote {
+  margin-top: 14px;
+  font-size: 26px;
+  font-weight: 400;
+  line-height: 1.38;
+  letter-spacing: -.3px;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+.why-meta {
+  margin-top: 20px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: rgba(235, 235, 245, .55);
+  text-wrap: pretty;
+}
+
+.why-rule { margin: 26px 0; height: .5px; background: var(--hair); }
+
+/* The preset reasons picked during onboarding, under the written why. */
+.why-chips { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 7px; }
+.why-chips span {
+  padding: 7px 12px;
+  border-radius: 9px;
+  background: var(--chip);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: rgba(235, 235, 245, .75);
+}
+
+.why-edit {
+  margin-top: 14px;
+  width: 100%;
+  min-height: 150px;
+  resize: none;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid rgba(255, 255, 255, .1);
+  font-family: var(--sf);
+  font-size: 18px;
+  line-height: 1.4;
+  color: var(--ink);
+  outline: none;
+}
+.why-edit::placeholder { color: rgba(235, 235, 245, .3); }
+.why-edit:focus { border-color: rgba(217, 164, 65, .5); }
 
 .tl { position: relative; display: flex; gap: 18px; }
 .tl__rail { flex: 0 0 96px; display: flex; flex-direction: column; align-items: center; }
@@ -625,7 +683,7 @@ body { font-family: var(--sf); }
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 74px 30px 34px;
+  padding: max(74px, calc(20px + var(--safe-top))) 30px max(34px, var(--safe-bottom));
   animation: rise .35s ease both;
   z-index: 5;
 }
@@ -679,7 +737,7 @@ body { font-family: var(--sf); }
 
 /* ---------------------------------------------------------------- analytics */
 
-.an-head { position: relative; padding: 20px 24px 0; }
+.an-head { position: relative; padding: calc(20px + var(--safe-top)) 24px 0; }
 .an-head__title { font-size: 21px; font-weight: 700; letter-spacing: 3.4px; line-height: 1.2; }
 .an-head__sub { margin-top: 6px; font-size: 13px; color: var(--label-dim); }
 
@@ -812,25 +870,32 @@ body { font-family: var(--sf); }
 .oath__body { padding: 15px 18px 17px; display: flex; align-items: flex-end; justify-content: space-between; }
 .oath__time { margin-top: 5px; font-size: 30px; font-weight: 600; letter-spacing: -1px; line-height: 1; }
 
+/* UISwitch: 51x31pt track, 27pt white knob inset 2pt, system green when on. */
 .switch {
-  width: 52px;
-  height: 30px;
-  flex: 0 0 52px;
-  border-radius: 999px;
+  width: 51px;
+  height: 31px;
+  flex: 0 0 51px;
+  border-radius: 15.5px;
   cursor: pointer;
-  padding: 3px;
+  padding: 2px;
+  border: 0;
   display: flex;
   justify-content: flex-start;
-  background: rgba(255, 255, 255, .07);
-  border: 1px solid rgba(255, 255, 255, .12);
+  background: #39393d;
+  transition: background-color .22s ease;
 }
-.switch i { width: 24px; height: 24px; border-radius: 50%; background: rgba(242, 240, 236, .55); }
-.switch.is-on { justify-content: flex-end; background: var(--green); border-color: var(--green); }
-.switch.is-on i { background: #fff; }
 
-/* Faith mode uses the light track rather than the green one. */
-.switch--light.is-on { background: rgba(242, 240, 236, .85); border-color: rgba(255, 255, 255, .3); }
-.switch--light.is-on i { background: #0f0f11; }
+.switch i {
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .15), 0 3px 1px rgba(0, 0, 0, .06);
+  transition: transform .22s cubic-bezier(.4, .2, .2, 1);
+}
+
+.switch.is-on { background: var(--green); }
+.switch.is-on i { transform: translateX(20px); }
 
 /* ---------------------------------------------------------------- oath sheet */
 
@@ -881,7 +946,91 @@ body { font-family: var(--sf); }
 .tile--row { display: flex; align-items: center; justify-content: space-between; }
 
 .tile__value { display: flex; align-items: center; gap: 8px; font-size: 14.5px; color: rgba(242, 240, 236, .55); }
-.tile__value span { color: rgba(242, 240, 236, .35); }
+.tile__chev { color: rgba(242, 240, 236, .35); transition: transform .2s ease; }
+.tile--row.is-on .tile__chev { transform: rotate(90deg); }
+
+/* An expanded row's editor, joined to the row above it. */
+.tile--sub {
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: #141417;
+}
+
+.sheet-input {
+  display: block;
+  width: 100%;
+  padding: 17px 18px;
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
+  border: 1px solid transparent;
+  font-family: var(--sf);
+  font-size: 15px;
+  color: var(--ink);
+  outline: none;
+}
+.sheet-input::placeholder { color: rgba(242, 240, 236, .35); }
+.sheet-input:focus { border-color: rgba(217, 164, 65, .5); }
+
+.time-input {
+  display: block;
+  width: 100%;
+  padding: 12px 10px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: var(--sf);
+  font-size: 17px;
+  color-scheme: dark;
+  outline: none;
+}
+
+/* A selectable row inside an expanded section. */
+.pick {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  cursor: pointer;
+  font-family: var(--sf);
+  font-size: 15px;
+  color: var(--ink);
+  text-align: left;
+}
+.pick:hover { background: rgba(255, 255, 255, .04); }
+.pick.is-on { background: rgba(52, 199, 89, .1); }
+
+.pick--stacked { align-items: flex-start; }
+.pick__name { display: block; font-size: 14px; font-weight: 700; letter-spacing: 1.4px; }
+.pick__desc {
+  display: block;
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: rgba(235, 235, 245, .5);
+  letter-spacing: 0;
+  font-weight: 400;
+}
+.pick__mark { flex: 0 0 17px; height: 17px; }
+
+.sheet-btn:disabled {
+  background: rgba(242, 240, 236, .16);
+  color: rgba(242, 240, 236, .4);
+  cursor: default;
+}
+.sheet-btn:disabled:hover { filter: none; }
+
+.empty {
+  margin: 40px 20px;
+  text-align: center;
+  font-size: 14px;
+  color: rgba(235, 235, 245, .45);
+}
 
 .nights { margin-top: 14px; display: flex; justify-content: space-between; gap: 6px; }
 
@@ -993,3 +1142,10 @@ body { font-family: var(--sf); }
 
 .row__value { display: flex; align-items: center; gap: 9px; font-size: 13.5px; color: rgba(242, 240, 236, .48); }
 .chev { color: rgba(242, 240, 236, .3); font-size: 17px; }
+
+.tile-note {
+  margin: 8px 4px 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(235, 235, 245, .4);
+}

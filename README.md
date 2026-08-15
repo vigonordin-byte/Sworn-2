@@ -80,9 +80,57 @@ The paywall's CTA restarts the flow at step 0.
   `HOUR_DATA`, `WEEKDAYS` in `home.js`) are fixed, exactly as in the design.
   Nothing yet derives them from real activity, and the analytics headline
   figures do not change with the selected range.
-- **The vow is a constant.** `VOW` in `home.js` is the same string on the home
-  screen, in the My why sheet, and in the intervention's third phase. It is not
-  captured anywhere in onboarding.
+## The iOS app
+
+`Sworn/` is an Xcode project generated from `Sworn/project.yml`. The `.xcodeproj`
+is not committed — regenerate it after cloning:
+
+```bash
+cd Sworn && xcodegen generate
+```
+
+Two targets:
+
+| Target | Role |
+|---|---|
+| `Sworn` | Hosts the web UI in a `WKWebView` and owns Screen Time |
+| `SwornMonitor` | `DeviceActivityMonitor` extension — raises and lowers the shield |
+
+### Real app blocking
+
+Blocking uses Apple's Screen Time frameworks, so apps are genuinely locked by
+the system rather than by anything in the web layer.
+
+- **FamilyControls** — authorization, and `FamilyActivityPicker` for choosing
+  apps. The returned tokens are opaque by design: the app can count them but
+  can never learn which apps they are.
+- **DeviceActivity** — one repeating schedule per oath, `time` → `until`.
+- **ManagedSettings** — one `ManagedSettingsStore` per oath, so lifting one lock
+  never lifts another.
+
+The web layer owns the oaths and posts them to native on every change; the
+extension applies the shield at each window boundary, skipping days the oath
+does not cover. Everything crosses through the `group.com.vigonordin.sworn2app`
+App Group, since the extension is a separate process.
+
+This needs the **Family Controls** entitlement and an explicit App ID — it
+cannot go on a wildcard provisioning profile. Outside the app (plain browser)
+`NATIVE` is false and the app picker falls back to a mock list so the design
+still previews; nothing is blocked in that mode.
+
+## The why
+
+The user's reason lives in `why.js`, shared by both pages and persisted to
+`localStorage` under `sworn.why` (`{ text, reasons[] }`).
+
+It is written at onboarding step 26 — preset reasons plus a free-text field —
+and then read back in three places: the vow on the home screen, the My why page,
+and the intervention's third phase, which is the point of it. Faith mode still
+overrides that phase with scripture. Until the user writes their own,
+`WHY_FALLBACK` stands in.
+
+If storage is unavailable, `why.js` falls back to an in-memory copy that lasts
+the session rather than throwing.
 - **Fills the screen on a phone.** The design is a desktop preview: a 393×852
   frame with a drawn bezel. Above 520px that is preserved; at or below it the
   bezel is dropped and the app fills the viewport, otherwise the fixed 852px

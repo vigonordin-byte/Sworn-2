@@ -1,0 +1,95 @@
+name: Sworn
+
+options:
+  bundleIdPrefix: com.vigonordin
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+targets:
+
+  Sworn:
+    type: application
+    platform: iOS
+
+    dependencies:
+      - target: SwornMonitor
+
+    sources:
+      - path: Sources
+
+      # The web UI, bundled flat so the relative <link>/<script> paths resolve
+      # unchanged. These are the same files the dev server serves — referenced,
+      # not copied, so there is only ever one source of truth.
+      - path: ../index.html
+        buildPhase: resources
+      - path: ../home.html
+        buildPhase: resources
+      - path: ../why.js
+        buildPhase: resources
+      - path: ../app.js
+        buildPhase: resources
+      - path: ../home.js
+        buildPhase: resources
+      - path: ../styles.css
+        buildPhase: resources
+      - path: ../home.css
+        buildPhase: resources
+
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleDisplayName: Sworn
+        UILaunchScreen:
+          UIColorName: launchBackground
+        UIUserInterfaceStyle: Dark
+        UIStatusBarStyle: UIStatusBarStyleLightContent
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+
+    settings:
+      base:
+        PRODUCT_NAME: Sworn
+        PRODUCT_BUNDLE_IDENTIFIER: com.vigonordin.sworn2app
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: NO
+        # A real device refuses an unsigned binary, so sign for both. Change
+        # DEVELOPMENT_TEAM if you build under a different Apple account.
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: Sources/Sworn.entitlements
+        DEVELOPMENT_TEAM: 3KBFWAD2YK
+
+  # Out-of-process. iOS wakes it at each schedule boundary, and it is the only
+  # place the shield is actually raised or lowered. Shared.swift compiles into
+  # both targets so they agree on the App Group layout.
+  SwornMonitor:
+    type: app-extension
+    platform: iOS
+
+    sources:
+      - path: ../SwornMonitor
+      - path: Sources/Shared.swift
+
+    info:
+      path: ../SwornMonitor/Info.plist
+      properties:
+        CFBundleDisplayName: Sworn Monitor
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.deviceactivity.monitor-extension
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).SwornMonitor
+
+    settings:
+      base:
+        PRODUCT_NAME: SwornMonitor
+        PRODUCT_BUNDLE_IDENTIFIER: com.vigonordin.sworn2app.monitor
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: ../SwornMonitor/SwornMonitor.entitlements
+        DEVELOPMENT_TEAM: 3KBFWAD2YK

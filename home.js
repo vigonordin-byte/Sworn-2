@@ -22,11 +22,16 @@ const TIER_COPY = [
   'A hundred days is no longer a streak, it is how you live. Eternal is the last tier because there is nothing beyond it to chase: the oath has become ordinary, and that is the whole point.'
 ];
 
-const OATHS = [
-  { name: 'No Reddit after 20:00', schedule: 'Every day', time: '20:00' },
-  { name: 'Phone out of the bedroom', schedule: 'Weeknights', time: '22:30' },
-  { name: 'No socials before work', schedule: 'Weekdays', time: '06:30' }
+/* Day indices are 0 = Sunday, matching NIGHT_LABELS below. */
+let OATHS = [
+  { id: 1, name: 'No Reddit after 20:00', time: '20:00', until: '06:00', days: [0, 1, 2, 3, 4, 5, 6], apps: ['Reddit'], friction: 1, on: true },
+  { id: 2, name: 'Phone out of the bedroom', time: '22:30', until: '07:00', days: [0, 1, 2, 3, 4], apps: ['Reddit', 'X', 'Instagram', 'TikTok'], friction: 1, on: false },
+  { id: 3, name: 'No socials before work', time: '06:30', until: '09:00', days: [1, 2, 3, 4, 5], apps: ['Instagram', 'TikTok', 'X'], friction: 0, on: false }
 ];
+let nextOathId = 4;
+
+/** Apps the user can put under an oath. */
+const APP_LIST = ['Reddit', 'X', 'Instagram', 'TikTok', 'YouTube', 'Safari'];
 
 const FRICTION_LEVELS = [
   ['GENTLE', 'A reminder and a pause. You can still continue.'],
@@ -47,9 +52,6 @@ const WEEKDAYS = [['M', 3], ['T', 5], ['W', 4], ['T', 6], ['F', 9], ['S', 11], [
 const WEEKDAY_MAX = 11;
 
 const NIGHT_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
-const VOW = 'I want to control my impulses instead of being controlled by them.';
-const VOW_WRITTEN = 'Written the night you took the oath, 11 days ago.';
 
 // Fixed in the design — not yet derived from real activity.
 const STATS = {
@@ -73,15 +75,13 @@ const S = {
   view: 'home',        // home | running | done
   left: 60,
   range: '30D',
-  picked: ['Reddit', 'X', 'Safari', 'Instagram'],
-  activeDays: [0, 1, 2, 3, 4, 5, 6],
-  friction: 1,
-  oathOn: [0],
-  sheet: null,         // null | 'new' | oath index
+  draft: null,         // the oath being created/edited, or null
+  sheetSection: null,  // expanded sheet row: null | 'time' | 'apps' | 'friction'
   card: null,          // open analytics card: null | 1 | 2 | 3
-  appsOpen: false,
   whyOpen: false,
-  achievementsOpen: false
+  whyEditing: false,
+  achievementsOpen: false,
+  screenTimeAuthorized: false
 };
 
 let timer = null;
@@ -155,10 +155,46 @@ function toggle(list, value) {
   if (i === -1) list.push(value); else list.splice(i, 1);
 }
 
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const sameDays = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+
+/** "Every day", "Weekdays", … or a plain list. */
+function scheduleLabel(days) {
+  const d = [...days].sort((a, b) => a - b);
+  if (!d.length) return 'Never';
+  if (d.length === 7) return 'Every day';
+  if (sameDays(d, [1, 2, 3, 4, 5])) return 'Weekdays';
+  if (sameDays(d, [0, 6])) return 'Weekends';
+  if (sameDays(d, [0, 1, 2, 3, 4])) return 'Weeknights';
+  return d.map((i) => DAY_NAMES[i]).join(', ');
+}
+
+/** Every app covered by an active oath. */
+function lockedApps() {
+  const set = [];
+  OATHS.forEach((o) => { if (o.on) o.apps.forEach((a) => { if (!set.includes(a)) set.push(a); }); });
+  return set;
+}
+
+/** The active oath that locks soonest, by clock time. */
+function nextLock() {
+  const live = OATHS.filter((o) => o.on && o.days.length);
+  if (!live.length) return null;
+  return live.slice().sort((a, b) => a.time.localeCompare(b.time))[0];
+}
+
+/** 12-hour label for a "HH:MM" string. */
+function clock12(t) {
+  const [h, m] = t.split(':').map(Number);
+  const suffix = h < 12 ? 'AM' : 'PM';
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return `${hour}:${String(m).padStart(2, '0')} ${suffix}`;
+}
+
 // ---------------------------------------------------------------- backdrop
 
 function backdrop() {
-  if (S.achievementsOpen) return '<div class="bd-base"></div>';
+  if (S.achievementsOpen || S.whyOpen) return '<div class="bd-base"></div>';
   if (S.tab !== 'home') return '<div class="bd-flat"></div>';
   return `
     <div class="bd-base"></div>
@@ -169,13 +205,51 @@ function backdrop() {
     <div class="bd-fade"></div>`;
 }
 
+
+// ---------------------------------------------------------------- native bridge
+
+/* Inside the iOS app a native host is present and real Screen Time blocking is
+   available. In a plain browser there is none, so the app picker falls back to
+   a mock list purely so the design can still be previewed. */
+const NATIVE = typeof window !== 'undefined' && window.__swornNative === true;
+const native = (msg) => window.webkit?.messageHandlers?.sworn?.postMessage(msg);
+
+/** oath id -> how many apps/categories Screen Time is covering. */
+let shieldCounts = {};
+
+window.sworn = {
+  onAuth(granted) {
+    S.screenTimeAuthorized = granted;
+    render();
+  },
+  onCounts(counts) {
+    shieldCounts = counts || {};
+    render();
+  }
+};
+
+/** How many things an oath actually blocks. */
+function shieldCount(oath) {
+  if (!oath) return 0;
+  return NATIVE ? (shieldCounts[oath.id] || 0) : oath.apps.length;
+}
+
+/** Hand the device the current schedule. Every change routes through here. */
+function syncShields() {
+  if (!NATIVE) return;
+  native({
+    action: 'sync',
+    oaths: OATHS.map((o) => ({ id: o.id, time: o.time, until: o.until, days: o.days, on: o.on }))
+  });
+}
+
 // ---------------------------------------------------------------- home
 
 function homeTab() {
   const t = tierView(currentTier());
 
   return `
-    <div class="scroll" style="top:44px;bottom:78px;padding:0">
+    <div class="scroll" style="top:var(--safe-top);bottom:var(--nav-h);padding:0">
       <div class="apphead">
         <div class="apphead__mark">SWORN</div>
         <button type="button" class="icon-btn" style="width:40px;height:40px" data-act="achievements-open" aria-label="Achievements">
@@ -204,28 +278,23 @@ function homeTab() {
         </div>
       </div>
 
-      <div class="vow">“${esc(VOW)}”</div>
+      <div class="vow">“${esc(whyText())}”</div>
 
-      <button type="button" class="card prot" data-act="apps-toggle" aria-expanded="${S.appsOpen}">
-        <span style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+      <button type="button" class="card prot" data-act="tab" data-tab="commitments">
+        <span style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
           <span style="display:block">
             <span class="prot__on"><i></i>PROTECTED</span>
             <span style="display:block;margin-top:9px" class="prot__until">${esc(PROTECTION.until)}</span>
           </span>
-          <span style="display:block;text-align:right;flex:0 0 auto">
-            <span class="prot__left" style="display:block">${esc(PROTECTION.left)}</span>
-            <span style="display:block;margin-top:4px;font-size:13px;font-weight:400;color:${'rgba(235,235,245,.5)'}">remaining</span>
+          <span style="display:flex;align-items:center;gap:10px;flex:0 0 auto">
+            <span style="display:block;text-align:right">
+              <span class="prot__left" style="display:block">${esc(PROTECTION.left)}</span>
+              <span style="display:block;margin-top:4px;font-size:13px;font-weight:400;color:rgba(235,235,245,.5)">remaining</span>
+            </span>
+            <span class="chev">›</span>
           </span>
         </span>
         <span class="prot__track" style="display:block"><i style="width:${PROTECTION.progress}%"></i></span>
-        ${S.appsOpen ? `
-        <span style="display:flex;margin-top:13px;padding-top:12px;border-top:.5px solid rgba(255,255,255,.09);align-items:center;justify-content:space-between;gap:10px">
-          <span style="display:block">
-            <span style="display:block;font-size:13px;font-weight:400;color:rgba(235,235,245,.5)">Protected apps</span>
-            <span class="applist">${S.picked.map((a) => `<span>${esc(a)}</span>`).join('')}</span>
-          </span>
-          <span style="font-size:19px;color:rgba(242,240,236,.32)">›</span>
-        </span>` : ''}
       </button>
 
       <div class="actions">
@@ -234,7 +303,7 @@ function homeTab() {
           <div class="action__name">Add protection</div>
           <div class="action__sub">Lock another app or hour</div>
         </button>
-        <button type="button" class="card action" data-act="why-toggle">
+        <button type="button" class="card action" data-act="why-open">
           ${svg(HEART, 22, DIM)}
           <div class="action__name">My why</div>
           <div class="action__sub">Revisit your reason</div>
@@ -248,19 +317,38 @@ function homeTab() {
     </div>`;
 }
 
-function whySheet() {
+function whyPage() {
   if (!S.whyOpen) return '';
+  const why = loadWhy();
+  const picked = whyReasons();
+
+  const body = S.whyEditing ? `
+      <div class="why-label">Your why, in your own words</div>
+      <textarea class="why-edit" id="whyedit" placeholder="${esc(WHY_FALLBACK)}">${esc(why.text)}</textarea>
+      <div style="margin-top:16px;display:flex;flex-direction:column;gap:9px">
+        <button type="button" class="pill-btn pill-btn--primary" data-act="why-save">Save</button>
+        <button type="button" class="pill-btn pill-btn--plain" data-act="why-cancel">Cancel</button>
+      </div>` : `
+      <div class="why-label">Remember why you are doing this</div>
+      <div class="why-quote">“${esc(whyText())}”</div>
+      ${picked.length ? `<div class="why-chips">${picked.map((i) => `<span>${esc(WHY_REASONS[i])}</span>`).join('')}</div>` : ''}
+      <div class="why-meta">Written the night you took the oath, ${S.daysSworn} days ago.</div>
+      <div class="why-rule"></div>
+      <button type="button" class="pill-btn pill-btn--plain" data-act="why-edit">Edit my why</button>`;
+
   return `
-    <button type="button" class="why-scrim" data-act="why-toggle" aria-label="Close"></button>
-    <div class="why" role="dialog" aria-modal="true" aria-label="Why I'm doing this">
-      <div class="grabber"></div>
-      <div style="margin-top:20px;font-size:13px;color:rgba(235,235,245,.6)">Why I'm doing this</div>
-      <div style="margin-top:12px;font-size:20px;font-weight:400;line-height:1.4;text-wrap:pretty">“${esc(VOW)}”</div>
-      <div style="margin-top:16px;font-size:13px;line-height:1.5;color:rgba(235,235,245,.6);text-wrap:pretty">${esc(VOW_WRITTEN)}</div>
-      <div style="margin-top:22px;display:flex;flex-direction:column;gap:9px">
-        <button type="button" class="pill-btn pill-btn--primary" data-act="why-toggle">Done</button>
-        <button type="button" class="pill-btn pill-btn--plain">Edit</button>
+    <div class="page">
+      <div class="bd-ach"></div>
+      <div class="bd-ach-stars"></div>
+
+      <div class="page__head">
+        <button type="button" class="icon-btn" style="width:34px;height:34px" data-act="why-close" aria-label="Back">
+          ${svg(CHEVRON, 22, '#fff', 1.9)}
+        </button>
+        <div class="page__title">MY WHY</div>
       </div>
+
+      <div class="page__body">${body}</div>
     </div>`;
 }
 
@@ -271,19 +359,18 @@ function achievements() {
   const cur = currentTier();
 
   return `
-    <div class="ach">
+    <div class="page">
       <div class="bd-ach"></div>
       <div class="bd-ach-stars"></div>
 
-      <div class="statusbar"><span>23:41</span><span class="statusbar__right">5G ▮▮▮ 62%</span></div>
-      <div class="ach__head">
+      <div class="page__head">
         <button type="button" class="icon-btn" style="width:34px;height:34px" data-act="achievements-close" aria-label="Back">
           ${svg(CHEVRON, 22, '#fff', 1.9)}
         </button>
-        <div class="ach__title">ACHIEVEMENTS</div>
+        <div class="page__title">ACHIEVEMENTS</div>
       </div>
 
-      <div class="ach__list">
+      <div class="page__body">
         ${TIERS.map((d, i) => {
           const t = tierView(i);
           return `
@@ -325,7 +412,7 @@ function phase() {
   if (elapsed < t * 0.83) {
     return S.faith
       ? ['YOUR FAITH', '“Flee from sexual immorality.” — 1 Corinthians 6:18']
-      : ['YOUR REASON', '“I don’t want to waste another year of my life doing this.”'];
+      : ['YOUR REASON', '“' + whyText() + '”'];
   }
   return ['CHOOSE AN ACTION', 'Stand up. Leave the room. Get a glass of water.'];
 }
@@ -395,7 +482,7 @@ function analyticsTab() {
           aria-selected="${S.range === label}" data-act="range" data-range="${label}">${label}</button>`).join('')}
     </div>
 
-    <div class="scroll" style="top:150px;bottom:78px;padding:22px 20px 24px">
+    <div class="scroll" style="top:calc(106px + var(--safe-top));bottom:var(--nav-h);padding:22px 20px 24px">
 
       <button type="button" class="card an-card${on(S.card === 1)}" data-act="card" data-card="1" aria-expanded="${S.card === 1}">
         <span style="display:flex;align-items:center;justify-content:space-between;gap:12px">
@@ -469,8 +556,10 @@ function analyticsTab() {
 // ---------------------------------------------------------------- commitments
 
 function commitmentsTab() {
+  const lock = nextLock();
+
   return `
-    <div class="scroll" style="top:44px;bottom:78px;padding:0">
+    <div class="scroll" style="top:var(--safe-top);bottom:var(--nav-h);padding:0">
       <div style="position:relative;padding:24px 24px 0">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
           <div class="page-title">COMMITMENTS</div>
@@ -480,85 +569,133 @@ function commitmentsTab() {
 
       <div class="card card--static nextlock">
         <div class="nextlock__eyebrow">NEXT LOCK</div>
-        <div class="nextlock__time">20:00</div>
-        <div style="margin-top:8px;text-align:center;font-size:13px;color:rgba(242,240,236,.5)">Tonight</div>
+        <div class="nextlock__time">${lock ? esc(lock.time) : '—'}</div>
+        <div style="margin-top:8px;text-align:center;font-size:13px;color:rgba(242,240,236,.5)">${lock ? esc(scheduleLabel(lock.days)) : 'No active oath'}</div>
         <div class="nextlock__foot">
           ${svg(MOON, 22, DIM)}
           <div>
-            <div style="font-size:13.5px;font-weight:600">${S.picked.length} apps lock at this time</div>
-            <div style="margin-top:3px;font-size:12.5px;color:rgba(242,240,236,.45)">Locked until 06:00, sealed for 19 days</div>
+            <div style="font-size:13.5px;font-weight:600">${lock ? `${shieldCount(lock)} app${shieldCount(lock) === 1 ? ' locks' : 's lock'} at this time` : 'Nothing is locked'}</div>
+            <div style="margin-top:3px;font-size:12.5px;color:rgba(242,240,236,.45)">${lock ? esc(NATIVE ? `Locked until ${lock.until}` : (lock.apps.join(' · ') || 'No apps chosen')) : 'Turn an oath on to protect your apps'}</div>
           </div>
         </div>
       </div>
 
-      ${OATHS.map((o, i) => {
-        const active = S.oathOn.includes(i);
-        return `
+      ${OATHS.map((o) => `
         <div class="oath">
-          <button type="button" class="oath__head" data-act="oath-open" data-i="${i}">
+          <button type="button" class="oath__head" data-act="oath-open" data-id="${o.id}">
             <span>${esc(o.name)}</span>
             ${svg(PENCIL, 18, 'rgba(242,240,236,.42)')}
           </button>
           <div class="oath__body">
             <div>
-              <div style="font-size:12.5px;color:rgba(242,240,236,.45)">${esc(o.schedule)}</div>
-              <div class="oath__time" style="color:${active ? '#f2f0ec' : 'rgba(242,240,236,.35)'}">${esc(o.time)}</div>
+              <div style="font-size:12.5px;color:rgba(242,240,236,.45)">${esc(scheduleLabel(o.days))}</div>
+              <div class="oath__time" style="color:${o.on ? '#f2f0ec' : 'rgba(242,240,236,.35)'}">${esc(o.time)}</div>
             </div>
-            <button type="button" class="switch${on(active)}" data-act="oath-toggle" data-i="${i}"
-              role="switch" aria-checked="${active}" aria-label="${esc(o.name)}"><i></i></button>
+            <button type="button" class="switch${on(o.on)}" data-act="oath-toggle" data-id="${o.id}"
+              role="switch" aria-checked="${o.on}" aria-label="${esc(o.name)}"><i></i></button>
           </div>
-        </div>`;
-      }).join('')}
+        </div>`).join('')}
 
+      ${OATHS.length ? '' : '<div class="empty">No oaths yet. Tap + to swear one.</div>'}
       <div style="height:34px"></div>
     </div>`;
 }
 
+/* ---- the oath sheet -------------------------------------------------------
+   Edits a draft copy so Cancel can discard. Each row expands in place rather
+   than pushing a sub-page, which keeps the whole oath visible while editing. */
+
+const countLabel = (n) => n + (n === 1 ? ' app' : ' apps');
+
+function blankOath() {
+  return { id: null, name: '', time: '20:00', until: '06:00', days: [0, 1, 2, 3, 4, 5, 6], apps: [], friction: 1, on: true };
+}
+
 function oathSheet() {
-  if (S.sheet === null) return '';
-  const editing = typeof S.sheet === 'number' ? OATHS[S.sheet] : null;
+  if (!S.draft) return '';
+  const d = S.draft;
+  const editing = d.id !== null;
+  const ready = d.name.trim().length > 0;
+  const sec = S.sheetSection;
+
+  const row = (label, value, section, icon) => `
+    <button type="button" class="tile tile--row${on(sec === section)}" style="margin-top:11px" data-act="section" data-section="${section}" aria-expanded="${sec === section}">
+      <span class="row__left">${icon ? svg(icon, 19, DIM) : ''}<span style="font-weight:600">${label}</span></span>
+      <span class="tile__value"><span class="tile__val">${esc(value)}</span><span class="tile__chev">›</span></span>
+    </button>`;
 
   return `
-    <button type="button" class="scrim" data-act="sheet-close" aria-label="Close"></button>
+    <button type="button" class="scrim" data-act="sheet-cancel" aria-label="Close"></button>
     <div class="sheet-full" role="dialog" aria-modal="true" aria-label="${editing ? 'Edit oath' : 'New oath'}">
       <div class="sheet__bar">
-        <button type="button" class="sheet__cancel" data-act="sheet-close">Cancel</button>
+        <button type="button" class="sheet__cancel" data-act="sheet-cancel">Cancel</button>
         <div class="sheet__title">${editing ? 'Edit oath' : 'New oath'}</div>
         <div style="width:78px"></div>
       </div>
 
-      <div class="tile" style="margin-top:22px">${esc(editing ? editing.name : 'Name this oath')}</div>
+      <input class="sheet-input" style="margin-top:22px" id="oathname" data-field="name"
+        value="${esc(d.name)}" placeholder="Name this oath" autocomplete="off">
 
-      <div class="tile tile--row" style="margin-top:11px">
-        <div style="font-weight:600">Locks at</div>
-        <div class="tile__value">${esc(editing ? editing.time : '20:00')}<span>›</span></div>
-      </div>
+      ${row('Locks at', d.time, 'time')}
+      ${sec === 'time' ? `
+        <div class="tile tile--sub">
+          <input type="time" class="time-input" data-field="time" value="${esc(d.time)}">
+        </div>` : ''}
+
+      ${row('Unlocks at', d.until, 'until')}
+      ${sec === 'until' ? `
+        <div class="tile tile--sub">
+          <input type="time" class="time-input" data-field="until" value="${esc(d.until)}">
+        </div>` : ''}
 
       <div class="tile" style="margin-top:11px;padding:18px">
-        <div style="font-size:13px;color:rgba(242,240,236,.55)">On these nights</div>
+        <div style="font-size:13px;color:rgba(242,240,236,.55)">On these nights <span style="color:rgba(242,240,236,.35)">· ${esc(scheduleLabel(d.days))}</span></div>
         <div class="nights">
           ${NIGHT_LABELS.map((label, i) => `
-            <button type="button" class="night${on(S.activeDays.includes(i))}" data-act="night" data-i="${i}"
-              aria-pressed="${S.activeDays.includes(i)}">${label}</button>`).join('')}
+            <button type="button" class="night${on(d.days.includes(i))}" data-act="day" data-i="${i}"
+              aria-pressed="${d.days.includes(i)}" aria-label="${DAY_NAMES[i]}">${label}</button>`).join('')}
         </div>
       </div>
 
-      <div class="tile tile--row" style="margin-top:11px">
-        <div class="row__left">
-          ${svg(LOCK, 19, DIM)}
-          <div style="font-weight:600">App blocking</div>
-        </div>
-        <div class="tile__value">${S.picked.length} apps<span>›</span></div>
-      </div>
+      ${NATIVE ? `
+      <button type="button" class="tile tile--row" style="margin-top:11px" data-act="pick-apps" data-id="${d.id === null ? '' : d.id}">
+        <span class="row__left">${svg(LOCK, 19, DIM)}<span style="font-weight:600">App blocking</span></span>
+        <span class="tile__value">${countLabel(shieldCount(d))}<span class="tile__chev">›</span></span>
+      </button>
+      ${d.id === null ? '<div class="tile-note">Swear the oath first, then choose which apps it locks.</div>' : ''}
+      ` : `
+      ${row('App blocking', countLabel(d.apps.length), 'apps', LOCK)}
+      ${sec === 'apps' ? `
+        <div class="tile tile--sub">
+          ${APP_LIST.map((name) => {
+            const picked = d.apps.includes(name);
+            return `
+            <button type="button" class="pick${on(picked)}" data-act="app" data-app="${esc(name)}" aria-pressed="${picked}">
+              <span>${esc(name)}</span>
+              <span class="pick__mark">${picked ? svg('<path d="M4 12.5l5 5L20 6.5"/>', 17, '#34c759', 2.4) : ''}</span>
+            </button>`;
+          }).join('')}
+        </div>` : ''}
+      <div class="tile-note">Preview only — real blocking uses Apple's picker inside the app.</div>
+      `}
 
-      <div class="tile tile--row" style="margin-top:11px">
-        <div style="font-weight:600">Strictness</div>
-        <div class="tile__value" style="color:rgba(242,240,236,.6);font-weight:600">${FRICTION_LEVELS[S.friction][0]}<span>›</span></div>
-      </div>
+      ${row('Strictness', FRICTION_LEVELS[d.friction][0], 'friction')}
+      ${sec === 'friction' ? `
+        <div class="tile tile--sub">
+          ${FRICTION_LEVELS.map(([name, desc], i) => `
+            <button type="button" class="pick pick--stacked${on(d.friction === i)}" data-act="friction" data-i="${i}"
+              role="radio" aria-checked="${d.friction === i}">
+              <span>
+                <span class="pick__name">${name}</span>
+                <span class="pick__desc">${esc(desc)}</span>
+              </span>
+              <span class="pick__mark">${d.friction === i ? svg('<path d="M4 12.5l5 5L20 6.5"/>', 17, '#34c759', 2.4) : ''}</span>
+            </button>`).join('')}
+        </div>` : ''}
 
-      ${editing ? '<button type="button" class="oath-break">Break this oath</button>' : ''}
+      ${editing ? '<button type="button" class="oath-break" data-act="oath-break">Break this oath</button>' : ''}
 
-      <button type="button" class="sheet-btn" data-act="sheet-close">${editing ? 'SAVE CHANGES' : 'SWEAR IT'}</button>
+      <button type="button" class="sheet-btn" data-act="sheet-save" id="oathsave"${ready ? '' : ' disabled'}>${editing ? 'SAVE CHANGES' : 'SWEAR IT'}</button>
       <div style="margin-top:11px;text-align:center;font-size:11.5px;color:rgba(242,240,236,.32)">Breaking an oath early is recorded in your history.</div>
       <div style="height:24px"></div>
     </div>`;
@@ -574,7 +711,7 @@ const settingsRow = (icon, name, value) => `
 
 function settingsTab() {
   return `
-    <div class="scroll" style="top:44px;bottom:78px;padding:0">
+    <div class="scroll" style="top:var(--safe-top);bottom:var(--nav-h);padding:0">
       <div style="padding:24px 24px 0" class="page-title">SETTINGS</div>
 
       <button type="button" class="card account">
@@ -589,11 +726,11 @@ function settingsTab() {
       <div class="group-label">THE OATH</div>
       <div class="group">
         ${settingsRow(PARTNER, 'Accountability partner', 'Marcus')}
-        ${settingsRow(LOCK, 'Apps under oath', S.picked.length + ' apps')}
+        ${settingsRow(LOCK, 'Apps under oath', countLabel(NATIVE ? OATHS.reduce((n, o) => n + (o.on ? shieldCount(o) : 0), 0) : lockedApps().length))}
         ${settingsRow(MOON, 'Default locked window', '20:00 – 06:00')}
         <div class="row row--static">
           <span class="row__left">${svg(CROSS, 20, DIM)}<span class="row__name">Faith mode</span></span>
-          <button type="button" class="switch switch--light${on(S.faith)}" data-act="faith"
+          <button type="button" class="switch${on(S.faith)}" data-act="faith"
             role="switch" aria-checked="${S.faith}" aria-label="Faith mode"><i></i></button>
         </div>
       </div>
@@ -651,9 +788,9 @@ function render() {
   document.getElementById('screen').innerHTML = screenHtml();
   document.getElementById('nav').innerHTML = nav();
   document.getElementById('layer').innerHTML =
-    (S.tab === 'home' ? intervention() + whySheet() : '') +
-    (S.tab === 'commitments' ? oathSheet() : '') +
-    achievements();
+    (S.tab === 'home' ? intervention() : '') +
+    oathSheet() +
+    achievements() + whyPage();
 }
 
 /** The countdown ticks once a second — patch it rather than re-render. */
@@ -710,21 +847,112 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'resisted': return endIntervention();
     case 'achievements-open': S.achievementsOpen = true; return render();
     case 'achievements-close': S.achievementsOpen = false; return render();
-    case 'apps-toggle': S.appsOpen = !S.appsOpen; return render();
-    case 'why-toggle': S.whyOpen = !S.whyOpen; return render();
+    case 'why-open': S.whyOpen = true; return render();
+    case 'why-close': S.whyOpen = false; S.whyEditing = false; return render();
+    case 'why-edit': S.whyEditing = true; return render();
+    case 'why-cancel': S.whyEditing = false; return render();
+    case 'why-save': {
+      const box = document.getElementById('whyedit');
+      const why = loadWhy();
+      if (box) why.text = box.value;
+      saveWhy(why);
+      S.whyEditing = false;
+      return render();
+    }
     case 'range': S.range = el.dataset.range; return render();
     case 'card': {
       const n = Number(el.dataset.card);
       S.card = S.card === n ? null : n;
       return render();
     }
-    case 'oath-toggle': toggle(S.oathOn, i); return render();
-    case 'oath-open': S.sheet = i; return render();
-    case 'sheet-new': S.tab = 'commitments'; S.sheet = 'new'; return render();
-    case 'sheet-close': S.sheet = null; return render();
-    case 'night': toggle(S.activeDays, i); return render();
+    case 'oath-toggle': {
+      const o = OATHS.find((x) => x.id === Number(el.dataset.id));
+      if (o) o.on = !o.on;
+      syncShields();
+      return render();
+    }
+    case 'oath-open': {
+      const o = OATHS.find((x) => x.id === Number(el.dataset.id));
+      if (!o) return;
+      S.draft = { ...o, days: [...o.days], apps: [...o.apps] };
+      S.sheetSection = null;
+      S.tab = 'commitments';
+      return render();
+    }
+    case 'sheet-new':
+      S.tab = 'commitments';
+      S.draft = blankOath();
+      S.sheetSection = null;
+      return render();
+    case 'sheet-cancel':
+      S.draft = null;
+      S.sheetSection = null;
+      return render();
+    case 'sheet-save': {
+      const d = S.draft;
+      if (!d || !d.name.trim()) return;
+      d.name = d.name.trim();
+      if (d.id === null) {
+        d.id = nextOathId++;
+        OATHS.push(d);
+      } else {
+        OATHS = OATHS.map((o) => (o.id === d.id ? d : o));
+      }
+      S.draft = null;
+      S.sheetSection = null;
+      syncShields();
+      return render();
+    }
+    case 'oath-break': {
+      const gone = S.draft.id;
+      OATHS = OATHS.filter((o) => o.id !== gone);
+      S.draft = null;
+      S.sheetSection = null;
+      if (NATIVE) native({ action: 'forget', oathId: gone });
+      syncShields();
+      return render();
+    }
+    case 'pick-apps': {
+      const id = Number(el.dataset.id);
+      if (Number.isNaN(id)) return;
+      return native({ action: 'pick', oathId: id });
+    }
+    case 'section': {
+      const name = el.dataset.section;
+      S.sheetSection = S.sheetSection === name ? null : name;
+      return render();
+    }
+    case 'day': toggle(S.draft.days, i); return render();
+    case 'app': toggle(S.draft.apps, el.dataset.app); return render();
+    case 'friction': S.draft.friction = i; return render();
     case 'faith': S.faith = !S.faith; return render();
   }
 });
 
+/* Text and time fields write straight to the draft. Re-rendering on every
+   keystroke would drop the caret, and on iOS it would dismiss the time wheel
+   mid-spin, so these patch only the affected bits. */
+document.getElementById('phone').addEventListener('input', (e) => {
+  const field = e.target.dataset.field;
+  if (!field || !S.draft) return;
+
+  if (field === 'name') {
+    S.draft.name = e.target.value;
+    const save = document.getElementById('oathsave');
+    if (save) save.disabled = !S.draft.name.trim();
+    return;
+  }
+
+  if (field === 'time' || field === 'until') {
+    S.draft[field] = e.target.value;
+    const label = document.querySelector(`[data-section="${field}"] .tile__val`);
+    if (label) label.textContent = e.target.value;
+  }
+});
+
 render();
+
+if (NATIVE) {
+  native({ action: 'authorize' });
+  syncShields();
+}
