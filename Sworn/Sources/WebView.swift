@@ -40,6 +40,14 @@ struct WebView: UIViewRepresentable {
         webView.scrollView.backgroundColor = .black
         webView.scrollView.bounces = false
         webView.scrollView.contentInsetAdjustmentBehavior = .never
+
+        // This is an app, not a document — pinching and double-tapping to zoom
+        // just breaks the layout. The viewport meta asks for the same thing;
+        // this is the part the page cannot override.
+        webView.scrollView.minimumZoomScale = 1
+        webView.scrollView.maximumZoomScale = 1
+        webView.scrollView.bouncesZoom = false
+        webView.scrollView.pinchGestureRecognizer?.isEnabled = false
         context.coordinator.webView = webView
 
         guard let url = Bundle.main.url(forResource: page, withExtension: "html") else {
