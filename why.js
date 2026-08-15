@@ -16,7 +16,7 @@ function realizationsFor() { return B().realizations; }
 
 const REALIZATION_FALLBACK = [
   'Wanting to stop is not the same as stopping.',
-  "You've wanted to before. What changes it isn't more wanting — it's something standing in the way at the moment it counts."
+  "You've wanted to before. What changes it isn't more wanting. It's something standing in the way at the moment it counts."
 ];
 
 /** The realization for the first reason they picked, in their behaviour. */
@@ -163,7 +163,7 @@ const STATS_KEY = 'sworn.stats';
 const STATS_SEEDED = {
   hasData: true,
   rate: 92, rateDelta: 14,
-  rateNote: 'You kept your limits on 47 of 51 protected occasions — 14 points better than the previous 30 days.',
+  rateNote: 'You kept your limits on 47 of 51 protected occasions, 14 points better than the previous 30 days.',
   hardest: '22:00 – 01:00',
   hardestNote: 'That window holds 61% of your 44 interventions and lapses.',
   resisted: 38, attempts: 44,
@@ -173,7 +173,7 @@ const STATS_SEEDED = {
 const STATS_EMPTY = {
   hasData: false,
   rate: 0, rateDelta: 0, rateNote: '',
-  hardest: '—', hardestNote: '',
+  hardest: '–', hardestNote: '',
   resisted: 0, attempts: 0, resistedNote: ''
 };
 
@@ -298,7 +298,7 @@ function exportRecord() {
   const urge = loadUrge();
   const oaths = loadOaths() || [];
   const lines = [
-    'SWORN — my record',
+    'SWORN, my record',
     'Stopping: ' + B().choice,
     new Date().toLocaleString(),
     '',
@@ -324,7 +324,7 @@ function exportRecord() {
     String(urge.log.length) + ' time(s)',
     '',
     'RESTARTS',
-    ...(urge.lapses.length ? urge.lapses.map((l) => `- ${new Date(l.at).toLocaleDateString()}${l.note ? ' — ' + l.note : ''}`) : ['(none)'])
+    ...(urge.lapses.length ? urge.lapses.map((l) => `- ${new Date(l.at).toLocaleDateString()}${l.note ? ': ' + l.note : ''}`) : ['(none)'])
   ];
   return lines.join('\n');
 }

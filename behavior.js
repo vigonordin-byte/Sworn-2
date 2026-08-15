@@ -47,15 +47,15 @@ const BEHAVIOR_CONFIG = {
     },
 
     symptoms: [
+      ['FAITH', ['Feeling distant from God']],
       ['MENTAL', ["Poor memory or 'brain fog'", 'Difficulty concentrating', 'General anxiety', 'Feeling unmotivated', 'Lack of ambition to pursue goals']],
       ['PHYSICAL', ['Tiredness and lethargy', 'Weak arousal without it', 'Low sex drive or desire']],
-      ['SOCIAL', ['Unsatisfying intimacy', 'Feeling isolated from others', 'Reduced desire to socialize', 'Low self-confidence', 'Feeling unworthy of love']],
-      ['FAITH', ['Feeling distant from God']]
+      ['SOCIAL', ['Unsatisfying intimacy', 'Feeling isolated from others', 'Reduced desire to socialize', 'Low self-confidence', 'Feeling unworthy of love']]
     ],
 
     slides: [
-      ['IT IS A DRUG', "Every time releases dopamine. That is why it feels good, and why the brain keeps asking for it.", '◉'],
-      ['IT CROWDS OUT REAL LIFE', 'It reduces your appetite for a real relationship and replaces it with an appetite for more of itself.', '♡'],
+      ['IT IS A DRUG', "Every time releases dopamine. That is why it feels good, and why the brain keeps asking for it.", '💊'],
+      ['IT CROWDS OUT REAL LIFE', 'It reduces your appetite for a real relationship and replaces it with an appetite for more of itself.', '♥'],
       ['IT DULLS DESIRE', 'More than half of heavy users report losing interest in real intimacy and an overall drop in drive.', '⚥'],
       ['FEELING FLAT?', 'A raised dopamine baseline means you need more just to feel normal. That is why heavy use so often comes with low mood and low motivation.', '◔'],
       ['IT REVERSES', 'Given time away from it, the brain resets its sensitivity. Energy, focus and interest come back.', '❦']
@@ -92,7 +92,7 @@ const BEHAVIOR_CONFIG = {
 
       // It hurts my confidence
       ['Confidence is built from evidence.',
-       'Not from motivation, not from a good week — from times you said you would do something and then did it. Every one you keep is proof.'],
+       'Not from motivation, not from a good week, but from times you said you would do something and then did it. Every one you keep is proof.'],
 
       // It wastes my time
       ['You are not short of time. You are short of the hours it takes.',
@@ -104,13 +104,13 @@ const BEHAVIOR_CONFIG = {
 
       // I want more discipline
       ['Imagine who you could become.',
-       "Every time you give in, you're reinforcing the habit you're trying to escape. Every time you resist, you're practicing the person you want to become. This isn't about one night — it's about who you're becoming."]
+       "Every time you give in, you're reinforcing the habit you're trying to escape. Every time you resist, you're practicing the person you want to become. This isn't about one night. It's about who you're becoming."]
     ],
 
     /* The middle card on the "Rewiring benefits" screen. The other two on that
        screen are about dopamine and mindset, which hold for all three. */
     quote: ['Steven Bartlett', "There's no good in porn",
-      "Pornography doesn't have an educational role—it's only an open window for a market that brings more emptiness and addiction that profit to porn."],
+      "Pornography doesn't have an educational role. It's only an open window for a market that brings more emptiness and addiction that profit to porn."],
 
     vulnerable: ['Late at night', "When I'm alone", 'After waking up', "When I'm stressed", 'After seeing something triggering', 'After getting into bed'],
     apps: ['Safari', 'Chrome', 'Reddit', 'X', 'Instagram', 'TikTok'],
@@ -161,10 +161,10 @@ const BEHAVIOR_CONFIG = {
     },
 
     symptoms: [
+      ['FAITH', ['Feeling distant from God']],
       ['MENTAL', ['Constantly thinking about the next bet', 'Difficulty concentrating', 'General anxiety', 'Restlessness when not betting', 'Chasing losses']],
       ['MONEY', ['Betting more than I can afford', 'Borrowing to keep betting', 'Hiding what I have lost']],
-      ['SOCIAL', ['Lying about it to people close to me', 'Withdrawing from friends', 'Arguments about money', 'Shame after a loss', 'Feeling I have let people down']],
-      ['FAITH', ['Feeling distant from God']]
+      ['SOCIAL', ['Lying about it to people close to me', 'Withdrawing from friends', 'Arguments about money', 'Shame after a loss', 'Feeling I have let people down']]
     ],
 
     slides: [
@@ -189,17 +189,17 @@ const BEHAVIOR_CONFIG = {
 
     realizations: [
       ['Think about where the money could have gone.',
-       "The next bet won't fix the last one. You're not trying to win back yesterday — you're trying to take control of tomorrow."],
+       "The next bet won't fix the last one. You're not trying to win back yesterday. You're trying to take control of tomorrow."],
       ["Control isn't a feeling. It's a decision you already made.",
        'You decided once, calmly, with a clear head. The next bet will argue otherwise. Sworn holds you to the version of you that decided.'],
       ['Chasing is how a bad day becomes a bad year.',
-       'The loss is already spent. Betting again does not recover it — it only decides how much more goes with it.'],
+       'The loss is already spent. Betting again does not recover it. It only decides how much more goes with it.'],
       ["It doesn't stay private.",
        'It shows up as tension about money, as conversations you avoid, as trust you have to keep rebuilding. People feel it before they can name it.'],
       ['Hiding it is the part that grows.',
        'The bets are survivable. The secrecy is what makes them heavier, and it compounds faster than the losses do.'],
       ['Control is built from evidence.',
-       'Not from a good month or a lucky run — from times you said you would stop and then did. Every one you keep is proof.'],
+       'Not from a good month or a lucky run, but from times you said you would stop and then did. Every one you keep is proof.'],
       ['You already know how this ends.',
        'The bet takes seconds. What follows lasts far longer. Don’t trade what you actually want for what you want right now.'],
       ['The best time to stop is before you have to.',
@@ -209,7 +209,7 @@ const BEHAVIOR_CONFIG = {
     /* Attributed to Sworn rather than a public figure: putting invented words
        in a real person's mouth is not something we do for copy. */
     quote: ['Sworn', 'The margin is the product',
-      'A betting app is not a game that happens to make money — the margin is the whole design. Over enough bets the outcome is arithmetic, and it is not in your favour.'],
+      'A betting app is not a game that happens to make money. The margin is the whole design, and over enough bets the outcome is arithmetic.'],
 
     vulnerable: ['During sports', "When I'm bored", 'After losing money', 'Late at night', "When I'm stressed", "When I'm watching a game"],
     apps: ['Safari', 'Chrome', 'Betting apps', 'X', 'Instagram', 'YouTube'],
@@ -260,14 +260,14 @@ const BEHAVIOR_CONFIG = {
     },
 
     symptoms: [
+      ['FAITH', ['Feeling distant from God']],
       ['MENTAL', ['Difficulty concentrating', 'Reaching for the phone without deciding to', 'General anxiety', 'Feeling unmotivated', 'Struggling to sit with boredom']],
       ['PHYSICAL', ['Going to bed later than planned', 'Waking up tired', 'Sore eyes or headaches']],
-      ['SOCIAL', ['Half-present with people', 'Comparing myself to others', 'Feeling behind everyone else', 'Low self-confidence', 'Losing hours I meant to spend elsewhere']],
-      ['FAITH', ['Feeling distant from God']]
+      ['SOCIAL', ['Half-present with people', 'Comparing myself to others', 'Feeling behind everyone else', 'Low self-confidence', 'Losing hours I meant to spend elsewhere']]
     ],
 
     slides: [
-      ['THE FEED IS DESIGNED', 'Infinite scroll has no stopping cue on purpose. You are not weak-willed — you are up against a system built to hold you.', '◉'],
+      ['THE FEED IS DESIGNED', 'Infinite scroll has no stopping cue on purpose. You are not weak-willed. You are up against a system built to hold you.', '◉'],
       ['IT COSTS YOUR FOCUS', 'Every switch has a re-entry cost. An hour broken into fragments is not an hour of attention.', '◑'],
       ['COMPARISON IS THE PRODUCT', 'You are comparing your ordinary day to everyone else’s highlights, thousands of times a week.', '⚖'],
       ['FEELING FLAT?', 'Constant novelty raises the bar for what feels interesting. That is why everything slower starts to feel boring.', '◔'],
@@ -288,7 +288,7 @@ const BEHAVIOR_CONFIG = {
 
     realizations: [
       ['Every scroll feels small.',
-       'But small moments repeated every day become years. You don’t need more time — you need to stop giving it away.'],
+       'But small moments repeated every day become years. You don’t need more time. You need to stop giving it away.'],
       ['You are not choosing it. That is the point.',
        'The feed has no ending, so there is no moment where stopping feels natural. The decision has to be made before you open it.'],
       ['Your attention is trained by whatever you keep feeding it.',
@@ -298,7 +298,7 @@ const BEHAVIOR_CONFIG = {
       ["You're comparing your day to everyone's highlights.",
        'Thousands of times a week, against a version of other people that does not exist. Nobody wins that.'],
       ['Discipline is built from evidence.',
-       'Not from motivation, not from a good week — from times you said you would stop and then did. Every one you keep is proof.'],
+       'Not from motivation, not from a good week, but from times you said you would stop and then did. Every one you keep is proof.'],
       ['You already know how this ends.',
        'It is never the scroll you regret starting. It is the hour you find gone afterwards.'],
       ['Being present is not a feeling you wait for.',

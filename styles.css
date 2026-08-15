@@ -384,6 +384,27 @@ a:hover { color: var(--gold-lt); }
 .opt.is-on .opt__label { color: var(--ink); }
 .opt.is-on .opt__n { background: var(--ink); color: #0a0a0b; }
 
+.cta-hold {
+  position: relative;
+  overflow: hidden;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.cta-hold__fill {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform .18s ease;
+  pointer-events: none;
+}
+.cta-hold.is-holding .cta-hold__fill { transform: scaleX(1); transition: transform .9s linear; }
+
+.cta-hold__label { position: relative; }
+
 .skip {
   margin-top: auto;
   width: 100%;

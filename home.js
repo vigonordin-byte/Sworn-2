@@ -15,10 +15,10 @@ const TIERS = [
 ];
 
 const TIER_COPY = [
-  'Bronze is where every oath starts. The first days are the loudest — urges arrive without warning and your own reasoning turns against you. Nothing is expected of you here except that you keep showing up.',
+  'Bronze is where every oath starts. The first days are the loudest, when urges arrive without warning and your own reasoning turns against you. Nothing is expected of you here except that you keep showing up.',
   'By five days the noise begins to settle. Sleep improves, focus returns in short stretches, and the urge stops feeling like an emergency. Silver marks the point where the habit is no longer running the day.',
   'Ten days is where most attempts have already ended. Gold is earned by the ordinary work of keeping your locks in place and answering honestly at your checkup. Confidence stops being a feeling and becomes evidence.',
-  'A month changes the baseline. Diamond means the reward circuits have had real time to recalibrate — energy, drive and attention return to something closer to their natural level, and giving in becomes a decision rather than a reflex.',
+  'A month changes the baseline. Diamond means the reward circuits have had real time to recalibrate. Energy, drive and attention return to something closer to their natural level, and giving in becomes a decision rather than a reflex.',
   'A hundred days is no longer a streak, it is how you live. Eternal is the last tier because there is nothing beyond it to chase: the oath has become ordinary, and that is the whole point.'
 ];
 
@@ -744,7 +744,7 @@ function commitmentsTab() {
 
       <div class="card card--static nextlock">
         <div class="nextlock__eyebrow">NEXT LOCK</div>
-        <div class="nextlock__time">${lock ? esc(lock.time) : '—'}</div>
+        <div class="nextlock__time">${lock ? esc(lock.time) : '–'}</div>
         <div style="margin-top:8px;text-align:center;font-size:13px;color:rgba(242,240,236,.5)">${lock ? esc(scheduleLabel(lock.days)) : 'No active oath'}</div>
         <div class="nextlock__foot">
           ${svg(MOON, 22, DIM)}
@@ -852,7 +852,7 @@ function oathSheet() {
             </button>`;
           }).join('')}
         </div>` : ''}
-      <div class="tile-note">Preview only — real blocking uses Apple's picker inside the app.</div>
+      <div class="tile-note">Preview only. Real blocking uses Apple's picker inside the app.</div>
       `}
 
       ${row('Strictness', FRICTION_LEVELS[d.friction][0], 'friction')}
@@ -1003,7 +1003,7 @@ const DOCS = {
   support: ['SUPPORT', `
     <p>Sworn is made by a very small team. If something is broken, or the app is not doing what you expected, write to us and a person will read it.</p>
     <p class="doc-strong">hello@sworn.app</p>
-    <p>Include what you were doing and what happened. If it is about blocking, say which apps and which hours — that is almost always where the answer is.</p>
+    <p>Include what you were doing and what happened. If it is about blocking, say which apps and which hours. That is almost always where the answer is.</p>
     <h3>Blocking is not working</h3>
     <p>Sworn blocks apps using Apple's Screen Time. Two things have to be true: you granted Screen Time access when asked, and the oath has apps chosen and is switched on. You can check both under Commitments.</p>
     <p>If you denied Screen Time access, iOS will not ask again. Turn it back on in Settings → Screen Time.</p>
@@ -1094,7 +1094,7 @@ function devPage() {
 
         <div class="group-label" style="margin:26px 0 0">TEST BEHAVIOR</div>
         <div class="group" style="margin:12px 0 0;padding:14px">
-          <div class="dev-note" style="margin:0 0 12px">Switches every adaptive screen without redoing onboarding.${SwornDev.chosen() ? '' : ' Not yet answered — defaulting.'}</div>
+          <div class="dev-note" style="margin:0 0 12px">Switches every adaptive screen without redoing onboarding.${SwornDev.chosen() ? '' : ' Not yet answered, defaulting.'}</div>
           <div class="dev-chips">
             ${SwornDev.BEHAVIOR_STATES.map((b) => `
               <button type="button" class="dev-chip${on(SwornDev.current() === b.id)}" data-act="dev-behavior" data-id="${b.id}">${esc(b.name)}</button>`).join('')}

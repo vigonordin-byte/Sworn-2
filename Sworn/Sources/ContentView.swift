@@ -37,13 +37,16 @@ struct ContentView: View {
 
                 } else if let session = auth.session {
                     web(page: "home", session: session)
-                        .task { screenTime.refreshAuthorizationState() }
-                        .familyActivityPicker(isPresented: pickerShown, selection: $screenTime.selection)
 
                 } else {
                     SignInView(auth: auth)
                 }
             }
+            // On the Group, not the home branch: onboarding's "Choose apps"
+            // asks for this picker too, and a modifier that only exists on the
+            // home page leaves that row silently doing nothing.
+            .familyActivityPicker(isPresented: pickerShown, selection: $screenTime.selection)
+            .task { screenTime.refreshAuthorizationState() }
 
             // Sits on top until there is something real underneath. It is the
             // same lockup the system launch screen draws, so the handover from

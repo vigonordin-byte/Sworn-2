@@ -23,13 +23,16 @@ const GOAL_TINTS = new Array(7).fill('rgba(255,255,255,.10)');
 
 
 const FEATURE_SLIDES = [
-  ['WELCOME TO SWORN', 'With over 2,000,000 users, Sworn is class-leading and based on years of research and user-interaction', '✦', true],
+  ['WELCOME TO SWORN', 'Built for one job: helping you actually stop. Real app blocking, a commitment you make once with a clear head, and a plan for your weakest moments.', '✦'],
   ['REWIRE YOUR BRAIN', 'Science-backed exercises help you rewire your brain, rebuild your dopamine receptors, and avoid setbacks.', '⬡'],
   ['STAY MOTIVATED', 'Breaking a habit this stubborn is hard. Your daily checkup keeps you motivated as you become your best self.', '☀'],
   ['AVOID SETBACKS', 'Sworn learns your habits and temptation triggers, providing you with 24/7 protection.', '⛨'],
   ['CONQUER YOURSELF', 'Know yourself to conquer yourself. Understand your strengths and weaknesses, earn medals, and track your progress.', '☖'],
   ['LEVEL UP YOUR LIFE', 'Rebooting has immense psychological and physical benefits. Grow stronger, healthier, and happier.', '❖']
 ];
+
+/* Glyphs whose meaning is carried by their colour. */
+const GLYPH_COLOR = { '♥': '#ff453a', '⬡': '#30d158', '⛨': '#ff453a' };
 
 const SLIDE_TINTS = [
   'rgba(217,164,65,.22)', 'rgba(200,120,110,.2)', 'rgba(170,130,200,.2)',
@@ -53,7 +56,7 @@ const REVIEW_DEFS = [
 const PLAN_DAY_DEFS = [
   ['Day 0 – Prepare your space', 'Shape your physical, digital, and social environment to make change easier'],
   ['Day 1 – Outsmart withdrawal', 'Use quick mental and physical tools to ride out urges and reset focus.'],
-  ['Day 5 – Feel better in your body', 'Move, eat clean, and recharge — your energy and clarity return fast.'],
+  ['Day 5 – Feel better in your body', 'Move, eat clean, and recharge. Your energy and clarity return fast.'],
   ["Day 6 – You're not alone", 'Connect with others on the same path. Share wins, get support.']
 ];
 
@@ -85,9 +88,9 @@ const GOALS = 26;
    accept the friction. This is the part that turns "I want to stop" into
    "I'm making a commitment". */
 const WHY = 27;
-const REALIZE = 28;
-const COST = 29;
-const FUTURE = 30;
+const WRITE = 28;
+const REALIZE = 29;
+const COST = 30;
 const REFLECT = 31;
 const COMMIT = 32;
 const VULNERABLE = 33;
@@ -107,6 +110,12 @@ const PAYWALL = 41;
    are opaque, so a hand-rolled list could never drive real blocking. In a
    browser there is no host, and the list stands in so the design previews. */
 const NATIVE = typeof window !== 'undefined' && window.__swornNative === true;
+
+/* Testing shortcuts. In the app the native host sets __swornDebug under
+   #if DEBUG only, so a Release build can never show them; in a browser
+   preview, add ?debug=1. */
+const DEBUG_UI = typeof window !== 'undefined'
+  && (window.__swornDebug === true || /[?&]debug=1\b/.test(window.location.search));
 const native = (msg) => window.webkit?.messageHandlers?.sworn?.postMessage(msg);
 
 /** Onboarding seeds oath 1, so that is what the picker writes against. */
@@ -243,12 +252,13 @@ function renderChrome() {
   const progress = Math.round((Math.min(S.step, FINALLY) / FINALLY) * 100);
   return `
     <div class="chrome">
-      <button type="button" class="chrome__back" data-act="back" aria-label="Go back">${CHEVRON(22)}</button>
+      ${S.step > 0
+        ? `<button type="button" class="chrome__back" data-act="back" aria-label="Go back">${CHEVRON(22)}</button>`
+        : '<span class="chrome__back" style="visibility:hidden" aria-hidden="true"></span>'}
       <div class="progress" role="progressbar" aria-label="Quiz progress"
         aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
         <div class="progress__fill" style="width:${progress}%"></div>
       </div>
-      <div class="lang">EN</div>
     </div>`;
 }
 
@@ -295,7 +305,7 @@ function question() {
             <span class="opt__label">${esc(label)}</span>
           </button>`).join('')}
       </div>
-      <button type="button" class="skip" data-act="skip">Skip test</button>
+      ${DEBUG_UI ? '<button type="button" class="skip" data-act="skip">Skip test</button>' : ''}
     </div>`;
 }
 
@@ -396,8 +406,9 @@ function symptoms() {
 function slide(ctx) {
   const { set, base, edu } = ctx;
   const idx = S.step - base;
-  const [title, body, glyph, hasPress] = set[idx];
+  const [title, body, glyph] = set[idx];
   const tint = SLIDE_TINTS[idx % SLIDE_TINTS.length];
+  const glyphColor = GLYPH_COLOR[glyph];
   const cta = edu && idx === set.length - 1 ? 'CONTINUE →' : 'NEXT →';
 
   return `
@@ -408,13 +419,11 @@ function slide(ctx) {
         </div>` : `<div class="wordmark">SWORN</div>`}
 
       <div class="orb" style="background:radial-gradient(circle at 38% 30%, ${tint} 0%, rgba(12,12,13,.9) 70%);box-shadow:0 0 60px ${tint}">
-        <div class="orb__glyph">${glyph}</div>
+        <div class="orb__glyph"${glyphColor ? ` style="color:${glyphColor}"` : ''}>${glyph}</div>
       </div>
 
       <div class="slide__title">${esc(title)}</div>
       <div class="slide__body">${esc(body)}</div>
-
-      ${hasPress ? `<div class="press"><span>FORBES</span><span>TECH TIMES</span><span>LA WEEKLY</span></div>` : ''}
 
       <div class="slide__dots">
         ${set.map((_, i) => `<button type="button" class="slide__dot" style="background:${i === idx ? '#f4e6c8' : 'rgba(242,240,236,.24)'}"
@@ -471,13 +480,10 @@ function whyScreen() {
             </button>`;
           }).join('')}
         </div>
-        <label class="field-label" style="display:block;margin-top:26px" for="whytext">In your own words</label>
-        <textarea class="field field--area" style="margin-top:9px" id="whytext" data-bind="whyText"
-          placeholder="I don't want to waste another year of my life doing this.">${esc(why.text)}</textarea>
         <div style="height:24px"></div>
       </div>
       <div class="footer-bar">
-        <button class="cta cta--glow" data-act="next">Save my why</button>
+        <button class="cta cta--glow" data-act="next">Continue</button>
       </div>
     </div>`;
 }
@@ -521,20 +527,22 @@ function writeScreen({ title, prompt, field, placeholder, cta }) {
 function costScreen() {
   return writeScreen({
     title: 'WHAT HAS IT COST YOU?',
-    prompt: 'Name what it has already taken. Be honest — no one else reads this.',
+    prompt: 'Name what it has already taken. Be honest. No one else reads this.',
     field: 'cost',
     placeholder: 'My sleep, my focus, and how I feel about myself.',
     cta: 'CONTINUE →'
   });
 }
 
-function futureScreen() {
+/* Reasons picked from a list are cheap. This one is theirs, and it is what
+   gets read back at the moment of temptation, so it cannot be skipped. */
+function writeWhyScreen() {
   return writeScreen({
-    title: 'NINETY DAYS FROM NOW',
-    prompt: 'If you stopped today, what would be different?',
-    field: 'future',
-    placeholder: "I'd have my evenings back, and I'd trust myself again.",
-    cta: 'CONTINUE →'
+    title: 'IN YOUR OWN WORDS',
+    prompt: 'Why do you want to stop? One honest sentence is enough.',
+    field: 'text',
+    placeholder: "I don't want to waste another year of my life doing this.",
+    cta: 'Save my why'
   });
 }
 
@@ -554,7 +562,7 @@ function reflectScreen() {
 const COMMIT_TERMS = [
   [LOCK_ICON, 'Your protected apps will be blocked during the times you choose.'],
   [CLOCK_ICON, "If you try to bypass your protection, you'll have to wait before you can disable it."],
-  [SHIELD_ICON, 'Sworn will make this harder to break — that is the point of it.']
+  [SHIELD_ICON, 'Sworn will make this harder to break. That is the point of it.']
 ];
 
 function commitScreen() {
@@ -572,8 +580,11 @@ function commitScreen() {
           </div>`).join('')}
       </div>
 
-      <div style="margin-top:auto;text-align:center;font-size:17px;font-weight:600">Are you ready to commit?</div>
-      <button class="cta cta--glow" style="margin-top:16px;" data-act="commit">I'm ready</button>
+      <div style="margin-top:auto;text-align:center;font-size:17px;font-weight:600">Hold the button to commit.</div>
+      <button class="cta cta--glow cta-hold" style="margin-top:16px;" data-hold="commit">
+        <span class="cta-hold__fill"></span>
+        <span class="cta-hold__label">I'm ready</span>
+      </button>
       <button type="button" class="skip" style="margin-top:14px;flex:0 0 auto" data-act="back">Not yet</button>
     </div>`;
 }
@@ -613,6 +624,7 @@ function vulnerableScreen() {
    punishment, it is them saying "I know I'm vulnerable at these times". */
 function protectScreen() {
   const p = loadProtect();
+  const ready = NATIVE ? shieldCount > 0 : p.apps.length > 0;
   return `
     <div class="screen protect anim-rise-fast">
       <div style="padding:0 22px">
@@ -621,17 +633,15 @@ function protectScreen() {
         <div class="serif" style="margin-top:12px;font-size:20px;color:rgba(242,240,236,.55);text-wrap:pretty">${esc(B().commitLine)}</div>
       </div>
 
-      <div class="scroll" style="top:196px;bottom:98px">
-        <div style="font-size:14px;line-height:1.55;color:rgba(242,240,236,.6);text-wrap:pretty">Sworn blocks your chosen apps automatically during this window. You won't have to decide anything in the moment — that is the whole point.</div>
-
+      <div class="scroll" style="top:186px;bottom:98px">
         <div class="window-row">
           <label class="window-cell">
-            <span class="window-cell__label">FROM</span>
+            <span class="window-cell__label">LOCKS AT</span>
             <input type="time" class="window-time" data-bind="protectFrom" value="${esc(p.from)}">
           </label>
           <span class="window-dash">–</span>
           <label class="window-cell">
-            <span class="window-cell__label">TO</span>
+            <span class="window-cell__label">UNLOCKS AT</span>
             <input type="time" class="window-time" data-bind="protectTo" value="${esc(p.to)}">
           </label>
         </div>
@@ -643,13 +653,12 @@ function protectScreen() {
               aria-pressed="${p.days.includes(i)}">${label}</button>`).join('')}
         </div>
 
-        <div class="field-label" style="margin-top:24px">Apps to protect</div>
+        <div class="field-label" style="margin-top:24px">App blocking</div>
         ${NATIVE ? `
         <button type="button" class="picker-row" data-act="pick-apps">
           <span>Choose apps</span>
           <span class="picker-row__value">${shieldCount ? shieldCount + (shieldCount === 1 ? ' app' : ' apps') : 'None yet'}<span class="chev">›</span></span>
         </button>
-        <div class="picker-note">Uses Apple's own picker, so Sworn never learns which apps you chose.</div>
         ` : `
         <div style="margin-top:11px;display:flex;flex-direction:column;gap:10px">
           ${B().apps.map((name) => {
@@ -661,20 +670,11 @@ function protectScreen() {
             </button>`;
           }).join('')}
         </div>`}
-
-        <div class="protect-summary">
-          <div class="protect-summary__win">${esc(p.from)}–${esc(p.to)}</div>
-          <div class="protect-summary__apps">${NATIVE
-            ? (shieldCount ? shieldCount + (shieldCount === 1 ? ' app' : ' apps') + ' blocked' : 'Choose at least one app')
-            : (p.apps.length ? esc(p.apps.join(', ')) + ' blocked' : 'Choose at least one app')}</div>
-          <div class="protect-summary__note">Sworn automatically protects you.</div>
-        </div>
         <div style="height:24px"></div>
       </div>
 
       <div class="footer-bar">
-        ${(() => { const ready = NATIVE ? shieldCount > 0 : p.apps.length > 0; return `
-        <button class="cta${ready ? '' : ' cta--muted'}" data-act="next" id="protectcta"${ready ? '' : ' disabled'}>Protect these hours</button>`; })()}
+        <button class="cta${ready ? '' : ' cta--muted'}" data-act="next" id="protectcta"${ready ? '' : ' disabled'}>Protect these hours</button>
       </div>
     </div>`;
 }
@@ -742,14 +742,6 @@ function rating() {
       <div style="margin-top:16px;text-align:center;font-size:25px;font-weight:700;letter-spacing:4px">GIVE US A RATING</div>
       <div class="stars" style="margin-top:18px">${STAR(26).repeat(5)}</div>
       <div class="serif" style="margin-top:20px;text-align:center;font-size:20px;color:rgba(242,240,236,.6);text-wrap:pretty">This app was designed for people like you.</div>
-      <div style="margin-top:14px;display:flex;align-items:center;justify-content:center;gap:12px">
-        <div class="facepile">
-          <div style="background:#2a2418"></div>
-          <div style="background:#332a1c"></div>
-          <div style="background:#3d3222"></div>
-        </div>
-        <div style="font-size:14px;color:rgba(242,240,236,.5)">+ 2,000,000 people</div>
-      </div>
       <div class="reviews">
         ${REVIEW_DEFS.map(([name, initial, text]) => `
           <div class="review">
@@ -861,9 +853,9 @@ function screenHtml() {
   switch (step) {
     case GOALS: return goals();
     case WHY: return whyScreen();
+    case WRITE: return writeWhyScreen();
     case REALIZE: return realizeScreen();
     case COST: return costScreen();
-    case FUTURE: return futureScreen();
     case REFLECT: return reflectScreen();
     case COMMIT: return commitScreen();
     case VULNERABLE: return vulnerableScreen();
@@ -879,9 +871,25 @@ function screenHtml() {
   }
 }
 
+let renderedStep = null;
+
 function render() {
+  const same = renderedStep === S.step;
+  const scroller = same ? document.querySelector('.scroll') : null;
+  const keepScroll = scroller ? scroller.scrollTop : 0;
+
   document.getElementById('chrome').innerHTML = renderChrome();
   document.getElementById('screen').innerHTML = screenHtml();
+
+  /* Re-rendering the same step is a selection update, not an arrival.
+     Replaying the entrance animation makes every tap flash, and the rebuilt
+     scroller forgets where it was; freeze both. */
+  if (same) {
+    document.querySelectorAll('#screen [class*="anim-"]').forEach((el) => { el.style.animation = 'none'; });
+    const sc = document.querySelector('.scroll');
+    if (sc) sc.scrollTop = keepScroll;
+  }
+  renderedStep = S.step;
 }
 
 // ---------------------------------------------------------------- events
@@ -907,7 +915,6 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'behavior': saveBehavior(BEHAVIORS[i]); return render();
     case 'trigger': toggleWhyTrigger(i); return render();
     case 'reason': toggleWhyReason(i); return render();
-    case 'commit': setWhyField('committed', true); return next();
     case 'protect-day': {
       const p = loadProtect();
       const at = p.days.indexOf(i);
@@ -929,21 +936,41 @@ document.getElementById('phone').addEventListener('click', (e) => {
   }
 });
 
+/* Committing is a hold, not a tap. The white fill sweeping left to right is
+   the affordance; letting go before it lands cancels cleanly. */
+const HOLD_MS = 900;
+let holdTimer = null;
+
+document.getElementById('phone').addEventListener('pointerdown', (e) => {
+  const el = e.target.closest('[data-hold]');
+  if (!el) return;
+  e.preventDefault();
+  el.classList.add('is-holding');
+  holdTimer = setTimeout(() => {
+    el.classList.remove('is-holding');
+    setWhyField('committed', true);
+    next();
+  }, HOLD_MS);
+});
+
+const releaseHold = () => {
+  clearTimeout(holdTimer);
+  document.querySelectorAll('[data-hold].is-holding').forEach((el) => el.classList.remove('is-holding'));
+};
+document.addEventListener('pointerup', releaseHold);
+document.addEventListener('pointercancel', releaseHold);
+
 // Text fields feed state without a re-render, so typing never loses the caret.
 document.getElementById('phone').addEventListener('input', (e) => {
   const key = e.target.dataset.bind;
   if (!key) return;
-  if (key === 'whyText') {
-    setWhyField('text', e.target.value);
-    return;
-  }
   if (key === 'protectFrom' || key === 'protectTo') {
     const p = loadProtect();
     p[key === 'protectFrom' ? 'from' : 'to'] = e.target.value;
     saveProtect(p);
     return render();
   }
-  if (key === 'cost' || key === 'future') {
+  if (key === 'text' || key === 'cost') {
     setWhyField(key, e.target.value);
     // Gate the CTA without re-rendering, or the caret jumps to the end.
     const cta = document.getElementById('writecta');
