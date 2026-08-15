@@ -45,6 +45,10 @@ targets:
         CFBundleDisplayName: Sworn
         UILaunchScreen:
           UIColorName: launchBackground
+          # Drawn by the system before any code runs, so the first frame is
+          # already branded rather than a black rectangle.
+          UIImageName: LaunchLogo
+          UIImageRespectsSafeAreaInsets: false
         UIUserInterfaceStyle: Dark
         UIStatusBarStyle: UIStatusBarStyleLightContent
         UISupportedInterfaceOrientations:

@@ -31,19 +31,15 @@ final class AppleAuth: NSObject, ObservableObject {
     /// How long to wait for Apple before trusting what we already have.
     private static let credentialTimeout: Double = 3
 
-    /// Reconnect a previous sign-in, unless Apple says it is no longer valid.
+    /// Reconnect a previous sign-in.
+    ///
+    /// The stored credential is trusted immediately so the app can draw without
+    /// waiting on the network, and Apple is asked afterwards. Blocking launch on
+    /// that round trip was the difference between instant and several seconds of
+    /// holding screen.
     func restore() async {
-        defer { checking = false }
-
-        guard let userId = defaults.string(forKey: Key.userId) else { return }
-
-        let state = await credentialState(for: userId, timeout: Self.credentialTimeout)
-
-        // nil means the check timed out. Signing the user out over a slow
-        // network would be worse than trusting the credential we already hold;
-        // a genuinely revoked one fails again at the next real use.
-        if let state, state != .authorized {
-            clear()
+        guard let userId = defaults.string(forKey: Key.userId) else {
+            checking = false
             return
         }
 
@@ -52,6 +48,13 @@ final class AppleAuth: NSObject, ObservableObject {
             name: defaults.string(forKey: Key.name) ?? "",
             firstRun: false
         )
+        checking = false
+
+        // Quietly confirm. nil means the check timed out — signing someone out
+        // over a slow network would be worse than trusting what we hold, and a
+        // genuinely revoked credential fails again at its next real use.
+        let state = await credentialState(for: userId, timeout: Self.credentialTimeout)
+        if let state, state != .authorized { clear() }
     }
 
     func handle(_ result: Result<ASAuthorization, Error>) {

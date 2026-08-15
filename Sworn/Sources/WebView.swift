@@ -13,10 +13,14 @@ struct WebView: UIViewRepresentable {
     let session: AppleAuth.Session?
     let app: AppState
     var onSignOut: (() -> Void)? = nil
+    /// Fires once the page has actually painted, so the splash can be held
+    /// until then instead of flashing black.
+    var onReady: (() -> Void)? = nil
 
     func makeCoordinator() -> Bridge {
         let bridge = Bridge(screenTime: screenTime, app: app)
         bridge.onSignOut = onSignOut
+        bridge.onReady = onReady
         return bridge
     }
 
@@ -41,6 +45,7 @@ struct WebView: UIViewRepresentable {
         ))
 
         let webView = WKWebView(frame: .zero, configuration: config)
+        webView.navigationDelegate = context.coordinator
         webView.isOpaque = false
         webView.backgroundColor = .black
         webView.scrollView.backgroundColor = .black
@@ -81,7 +86,7 @@ struct WebView: UIViewRepresentable {
 
     // MARK: bridge
 
-    final class Bridge: NSObject, WKScriptMessageHandler {
+    final class Bridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
         weak var webView: WKWebView?
         private let screenTime: ScreenTime
         private let app: AppState
@@ -177,6 +182,29 @@ struct WebView: UIViewRepresentable {
 
         /// Set by ContentView so the web layer can sign the user out.
         var onSignOut: (() -> Void)?
+        var onReady: (() -> Void)?
+        private var didSignalReady = false
+
+        // MARK: navigation
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            signalReady()
+        }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            // Never leave the splash up because a load failed.
+            signalReady()
+        }
+
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            signalReady()
+        }
+
+        private func signalReady() {
+            guard !didSignalReady else { return }
+            didSignalReady = true
+            onReady?()
+        }
 
         // MARK: system sheets
 
