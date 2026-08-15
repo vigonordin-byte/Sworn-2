@@ -23,7 +23,7 @@ const GOAL_TINTS = new Array(7).fill('rgba(255,255,255,.10)');
 
 
 const FEATURE_SLIDES = [
-  ['WELCOME TO SWORN', 'Built for one job: helping you actually stop. Real app blocking, a commitment you make once with a clear head, and a plan for your weakest moments.', '✦'],
+  ['WELCOME TO SWORN', "Sworn blocks the apps you choose, at the times you choose, with Apple's own Screen Time system. When temptation hits, it stands between you and the app.", '✦'],
   ['REWIRE YOUR BRAIN', 'Science-backed exercises help you rewire your brain, rebuild your dopamine receptors, and avoid setbacks.', '⬡'],
   ['STAY MOTIVATED', 'Breaking a habit this stubborn is hard. Your daily checkup keeps you motivated as you become your best self.', '☀'],
   ['AVOID SETBACKS', 'Sworn learns your habits and temptation triggers, providing you with 24/7 protection.', '⛨'],
@@ -47,10 +47,10 @@ const quoteDefs = () => [
 ];
 
 const REVIEW_DEFS = [
-  ['Finch B.', 'F', 'Sworn has been a lifesaver. The interventions actually work.'],
-  ['Chris S.', 'C', 'Grounded in science and nothing like the other apps I tried.'],
-  ['Lucas P.', 'L', 'Love the streak tracking and the oath card.'],
-  ['Marcus T.', 'M', 'Eleven days sworn and the friction settings keep me honest.']
+  ['Daniel', 'D', 'Sworn has been a lifesaver. The interventions actually work.'],
+  ['Chris', 'C', 'Grounded in science and nothing like the other apps I tried.'],
+  ['Lucas', 'L', 'Love the streak tracking and the oath card.'],
+  ['Marcus', 'M', 'Eleven days sworn and the friction settings keep me honest.']
 ];
 
 const PLAN_DAY_DEFS = [
@@ -65,9 +65,30 @@ const PLAN_DEFS = [
   ['Lifetime', '599,00 kr', 'pay once']
 ];
 
-// Placeholder result from the design — not yet derived from the answers.
-const SCORE = 64;
-const AVERAGE = 40;
+/* The result is real. Diagnostic questions carry a severity per option
+   (0 mildest, 1 most severe, defined next to each question in behavior.js);
+   the score is the mean severity mapped onto 35–90. Bounded on purpose: a
+   self-report quiz can never honestly say 0 or 100.
+
+   The "typical" bar is the same formula fed the middle answer on every
+   question, so the comparison is like for like, not an invented constant. */
+const SCORE_FLOOR = 35;
+const SCORE_SPAN = 55;
+
+function quizScore() {
+  const points = [];
+  quiz().forEach(([, options, severity], qi) => {
+    if (!severity) return; // demographic
+    const picked = options.indexOf(S.answers[QUIZ_START + qi]);
+    if (picked !== -1) points.push(severity[picked]);
+  });
+  const mean = points.length
+    ? points.reduce((sum, v) => sum + v, 0) / points.length
+    : 0.5; // skipped test: shown as exactly typical
+  return Math.round(SCORE_FLOOR + SCORE_SPAN * mean);
+}
+
+const typicalScore = () => Math.round(SCORE_FLOOR + SCORE_SPAN * 0.5);
 
 // ---------------------------------------------------------------- step map
 
@@ -343,6 +364,16 @@ function calculating() {
 }
 
 function analysis() {
+  const score = quizScore();
+  const typical = typicalScore();
+  const diff = score - typical;
+  const verdict = diff >= 0
+    ? B().analysis.verdict
+    : 'Your answers sit below the typical result. What you did report is still worth taking seriously.';
+  const compare = diff === 0
+    ? 'Right at the typical result'
+    : `<span>${Math.abs(diff)} points</span> ${diff > 0 ? 'above' : 'below'} the typical result`;
+
   return `
     <div class="screen analysis anim-rise">
       ${backCircle()}
@@ -353,20 +384,20 @@ function analysis() {
       <div class="serif" style="margin-top:11px;font-size:21px;color:rgba(242,240,236,.55);text-wrap:pretty">We've got some news to break to you...</div>
 
       <div class="card" style="margin-top:18px;padding:18px 16px 14px;border-radius:22px">
-        <div style="text-align:center;font-size:14px;line-height:1.45;color:rgba(242,240,236,.72);text-wrap:pretty">${esc(B().analysis.verdict)}</div>
+        <div style="text-align:center;font-size:14px;line-height:1.45;color:rgba(242,240,236,.72);text-wrap:pretty">${esc(verdict)}</div>
         <div class="bars">
           <div class="bar-col">
-            <div class="bar-you">${SCORE}%</div>
-            <div class="bar-label">Your Score</div>
+            <div class="bar-track"><div class="bar-you" style="height:${Math.round(152 * score / 100)}px">${score}%</div></div>
+            <div class="bar-label">Your score</div>
           </div>
           <div class="bar-col">
-            <div class="bar-avg"><div class="bar-avg__fill">${AVERAGE}%</div></div>
-            <div class="bar-label bar-label--dim">Average</div>
+            <div class="bar-track"><div class="bar-avg__fill" style="height:${Math.round(152 * typical / 100)}px">${typical}%</div></div>
+            <div class="bar-label bar-label--dim">Typical</div>
           </div>
         </div>
       </div>
 
-      <div style="margin-top:16px;text-align:center;font-size:15px;font-weight:600"><span>${SCORE}%</span> ${esc(B().analysis.compare)}</div>
+      <div style="margin-top:16px;text-align:center;font-size:15px;font-weight:600">${compare}</div>
       <div style="margin-top:8px;text-align:center;font-size:11.5px;color:rgba(242,240,236,.35);line-height:1.5">* This result is an indication only, not a medical diagnosis.</div>
       <button class="cta cta--glow" style="margin-top:auto;" data-act="next">Check your symptoms</button>
     </div>`;

@@ -27,22 +27,23 @@ const BEHAVIOR_CONFIG = {
     choiceNote: 'Blocking triggers and building real self-control.',
     noun: 'porn',
 
+    /* A question's optional third element scores each option, 0 mildest to 1
+       most severe. Questions without one are demographic and never counted. */
     quiz: [
       ['What is your gender?', ['Male', 'Female']],
-      ['How often does this usually happen?', ['Less than once a week', 'A few times a week', 'Once a day', 'More than once a day']],
+      ['How often does this usually happen?', ['Less than once a week', 'A few times a week', 'Once a day', 'More than once a day'], [0, 0.33, 0.67, 1]],
       ['Where did you hear about us?', ['Instagram', 'TikTok', 'Facebook', 'Google', 'Therapist', 'X']],
-      ['Have you noticed yourself needing more extreme material?', ['Yes', 'No']],
+      ['Have you noticed yourself needing more extreme material?', ['Yes', 'No'], [1, 0]],
       ['How old were you when it started?', ['12 or younger', '13 to 16', '17 to 24', '25 or older']],
-      ['Do you find it harder to feel aroused without it?', ['Frequently', 'Occasionally', 'Rarely or never']],
-      ['Do you use it to cope with discomfort or pain?', ['Frequently', 'Occasionally', 'Rarely or never']],
-      ['Do you turn to it when stressed?', ['Frequently', 'Occasionally', 'Rarely or never']],
-      ['Do you do it out of boredom?', ['Frequently', 'Occasionally', 'Rarely or never']],
-      ['Have you ever spent money on it?', ['Yes', 'No']]
+      ['Do you find it harder to feel aroused without it?', ['Frequently', 'Occasionally', 'Rarely or never'], [1, 0.5, 0]],
+      ['Do you use it to cope with discomfort or pain?', ['Frequently', 'Occasionally', 'Rarely or never'], [1, 0.5, 0]],
+      ['Do you turn to it when stressed?', ['Frequently', 'Occasionally', 'Rarely or never'], [1, 0.5, 0]],
+      ['Do you do it out of boredom?', ['Frequently', 'Occasionally', 'Rarely or never'], [1, 0.5, 0]],
+      ['Have you ever spent money on it?', ['Yes', 'No'], [1, 0]]
     ],
 
     analysis: {
       verdict: 'Your answers point to a real dependence on porn.',
-      compare: 'higher dependence than average',
       symptomsIntro: 'Heavy use has knock-on effects most people never connect to it.'
     },
 
@@ -143,20 +144,19 @@ const BEHAVIOR_CONFIG = {
 
     quiz: [
       ['What is your gender?', ['Male', 'Female']],
-      ['How often do you place a bet?', ['Less than once a week', 'A few times a week', 'Most days', 'Several times a day']],
+      ['How often do you place a bet?', ['Less than once a week', 'A few times a week', 'Most days', 'Several times a day'], [0, 0.33, 0.67, 1]],
       ['Where did you hear about us?', ['Instagram', 'TikTok', 'Facebook', 'Google', 'Therapist', 'X']],
-      ['Have your stakes been getting bigger?', ['Yes', 'No']],
+      ['Have your stakes been getting bigger?', ['Yes', 'No'], [1, 0]],
       ['How old were you when you first bet?', ['17 or younger', '18 to 21', '22 to 30', '31 or older']],
-      ['Do you bet more after losing?', ['Frequently', 'Occasionally', 'Rarely or never']],
-      ['Do you bet to cope with discomfort or pain?', ['Frequently', 'Occasionally', 'Rarely or never']],
-      ['Do you bet when stressed?', ['Frequently', 'Occasionally', 'Rarely or never']],
-      ['Do you bet out of boredom?', ['Frequently', 'Occasionally', 'Rarely or never']],
-      ['Have you ever hidden a bet from someone?', ['Yes', 'No']]
+      ['Do you bet more after losing?', ['Frequently', 'Occasionally', 'Rarely or never'], [1, 0.5, 0]],
+      ['Do you bet to cope with discomfort or pain?', ['Frequently', 'Occasionally', 'Rarely or never'], [1, 0.5, 0]],
+      ['Do you bet when stressed?', ['Frequently', 'Occasionally', 'Rarely or never'], [1, 0.5, 0]],
+      ['Do you bet out of boredom?', ['Frequently', 'Occasionally', 'Rarely or never'], [1, 0.5, 0]],
+      ['Have you ever hidden a bet from someone?', ['Yes', 'No'], [1, 0]]
     ],
 
     analysis: {
       verdict: 'Your answers point to gambling that is no longer under your control.',
-      compare: 'higher risk than average',
       symptomsIntro: 'Gambling costs more than money. Most of this is not obvious from the inside.'
     },
 
@@ -242,20 +242,19 @@ const BEHAVIOR_CONFIG = {
 
     quiz: [
       ['What is your gender?', ['Male', 'Female']],
-      ['How much do you scroll on an average day?', ['Under an hour', '1 to 2 hours', '3 to 4 hours', 'More than 4 hours']],
+      ['How much do you scroll on an average day?', ['Under an hour', '1 to 2 hours', '3 to 4 hours', 'More than 4 hours'], [0, 0.33, 0.67, 1]],
       ['Where did you hear about us?', ['Instagram', 'TikTok', 'Facebook', 'Google', 'Therapist', 'X']],
-      ['Do you open an app without deciding to?', ['Yes', 'No']],
+      ['Do you open an app without deciding to?', ['Yes', 'No'], [1, 0]],
       ['How old were you when you got your first phone?', ['10 or younger', '11 to 13', '14 to 17', '18 or older']],
-      ['Do you find it hard to stop once you start?', ['Frequently', 'Occasionally', 'Rarely or never']],
-      ['Do you scroll to cope with discomfort or pain?', ['Frequently', 'Occasionally', 'Rarely or never']],
-      ['Do you scroll when stressed?', ['Frequently', 'Occasionally', 'Rarely or never']],
-      ['Do you scroll out of boredom?', ['Frequently', 'Occasionally', 'Rarely or never']],
-      ['Do you scroll in bed before sleeping?', ['Yes', 'No']]
+      ['Do you find it hard to stop once you start?', ['Frequently', 'Occasionally', 'Rarely or never'], [1, 0.5, 0]],
+      ['Do you scroll to cope with discomfort or pain?', ['Frequently', 'Occasionally', 'Rarely or never'], [1, 0.5, 0]],
+      ['Do you scroll when stressed?', ['Frequently', 'Occasionally', 'Rarely or never'], [1, 0.5, 0]],
+      ['Do you scroll out of boredom?', ['Frequently', 'Occasionally', 'Rarely or never'], [1, 0.5, 0]],
+      ['Do you scroll in bed before sleeping?', ['Yes', 'No'], [1, 0]]
     ],
 
     analysis: {
       verdict: 'Your answers point to scrolling that is taking more than you realise.',
-      compare: 'more time lost than average',
       symptomsIntro: 'The cost is spread thin, which is exactly why it is easy to miss.'
     },
 
