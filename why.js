@@ -9,6 +9,9 @@ const WHY_KEY = 'sworn.why';
 /** Stands in until the user writes their own. */
 const WHY_FALLBACK = 'I want to control my impulses instead of being controlled by them.';
 
+/* Trimmed to the distinct ones. The three dropped — becoming a better version
+   of myself, living by my values, not being controlled by urges — all overlap
+   discipline, faith or losing control, and made the list feel like a survey. */
 const WHY_REASONS = [
   'Religious beliefs',
   'I feel disgusted afterward',
@@ -17,10 +20,7 @@ const WHY_REASONS = [
   'It hurts my confidence',
   'It wastes my time',
   'It affects my relationships',
-  'I want more discipline',
-  'I want to become a better version of myself',
-  'I want to live according to my values',
-  'I want to stop being controlled by my urges'
+  'I want more discipline'
 ];
 
 /* One realization per reason, in the same order as WHY_REASONS. Each takes what
@@ -57,19 +57,7 @@ const REALIZATIONS = [
 
   // I want more discipline
   ['Imagine who you could become.',
-   "Every time you give in, you're reinforcing the habit you're trying to escape. Every time you resist, you're practicing the person you want to become. This isn't about one night — it's about who you're becoming."],
-
-  // I want to become a better version of myself
-  ["You don't become that person one day.",
-   "You become them in the small moments nobody sees — the ones you'd get away with. That is where it is actually decided."],
-
-  // I want to live according to my values
-  ["Values you keep only when it's easy aren't values yet.",
-   'They become yours the first time you hold one when it costs you something. That moment is coming. You can decide now how you meet it.'],
-
-  // I want to stop being controlled by my urges
-  ['An urge is a suggestion, not an order.',
-   "It feels enormous, and it passes. You don't have to win against it. You only have to outlast it."]
+   "Every time you give in, you're reinforcing the habit you're trying to escape. Every time you resist, you're practicing the person you want to become. This isn't about one night — it's about who you're becoming."]
 ];
 
 const REALIZATION_FALLBACK = [

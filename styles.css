@@ -10,7 +10,10 @@
   --cream: #f4e6c8;
   --on-gold: #1a1408;
   --gold-grad: linear-gradient(180deg, #e7bc6a, #c8933a);
-  --serif: 'Instrument Serif', Georgia, serif;
+  --sf: -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+  --card: #18181b;
+  --card-on: #1f1f24;
+  --green: #34c759;
   --line: rgba(255, 255, 255, .1);
   --surface: rgba(255, 255, 255, .042);
   --surface-bd: rgba(255, 255, 255, .075);
@@ -21,7 +24,7 @@
 body {
   margin: 0;
   background: #141416;
-  font-family: Archivo, system-ui, sans-serif;
+  font-family: var(--sf);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -61,7 +64,7 @@ a:hover { color: var(--gold-lt); }
 }
 
 :focus-visible {
-  outline: 2px solid var(--gold-lt);
+  outline: 2px solid rgba(242, 240, 236, .6);
   outline-offset: 3px;
 }
 
@@ -73,7 +76,7 @@ a:hover { color: var(--gold-lt); }
   align-items: center;
   justify-content: center;
   padding: 32px;
-  background: radial-gradient(120% 80% at 50% 0%, #1e1e22 0%, #0d0d0f 60%);
+  background: #141416;
 }
 
 .phone {
@@ -96,7 +99,7 @@ a:hover { color: var(--gold-lt); }
 .phone__glow {
   position: absolute;
   inset: 0;
-  background: radial-gradient(80% 40% at 50% 0%, rgba(217, 164, 65, .13) 0%, rgba(0, 0, 0, 0) 68%), var(--bg);
+  background: var(--bg);
 }
 
 /* On a real phone the drawn bezel is a phone inside a phone, and the fixed
@@ -121,10 +124,7 @@ a:hover { color: var(--gold-lt); }
 .phone__noise {
   position: absolute;
   inset: 0;
-  opacity: .5;
-  background-image: radial-gradient(rgba(255, 255, 255, .14) 1px, rgba(0, 0, 0, 0) 1px);
-  background-size: 3px 3px;
-  mix-blend-mode: overlay;
+  display: none;
 }
 
 /* Every screen lays itself out against the phone frame. */
@@ -176,8 +176,7 @@ a:hover { color: var(--gold-lt); }
 .progress__fill {
   height: 100%;
   border-radius: 99px;
-  background: linear-gradient(90deg, var(--gold-dk), var(--gold-lt));
-  box-shadow: 0 0 14px rgba(217, 164, 65, .5);
+  background: var(--gold);
   transition: width .25s ease;
 }
 
@@ -227,26 +226,32 @@ a:hover { color: var(--gold-lt); }
   line-height: 1;
 }
 
-.serif { font-family: var(--serif); }
+/* Was Instrument Serif. The app dropped display faces entirely, so this is
+   now just the quieter, larger voice in the system stack. */
+.serif {
+  font-family: var(--sf);
+  font-weight: 400;
+  letter-spacing: -.3px;
+}
 
 .cta {
   width: 100%;
   border: 0;
   cursor: pointer;
   padding: 19px;
-  border-radius: 999px;
-  background: var(--gold-grad);
-  color: var(--on-gold);
-  font-family: Archivo, sans-serif;
-  font-size: 14.5px;
-  font-weight: 700;
-  letter-spacing: 2.8px;
+  border-radius: 20px;
+  background: var(--gold);
+  color: #1a1408;
+  font-family: var(--sf);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: .2px;
 }
 .cta:hover { filter: brightness(1.06); }
-.cta--glow { box-shadow: 0 14px 34px rgba(217, 164, 65, .28); }
-.cta--muted { background: rgba(217, 164, 65, .16); color: rgba(242, 240, 236, .4); }
-.cta--cream { background: var(--cream); color: var(--on-gold); }
-.cta--cream:hover { filter: brightness(1.04); }
+/* Kept as a no-op so callers do not need editing; the app has no glows. */
+.cta--glow {}
+.cta--muted { background: rgba(242, 240, 236, .14); color: rgba(242, 240, 236, .35); }
+.cta--cream { background: var(--ink); color: #0a0a0b; }
 
 .footer-bar {
   position: absolute;
@@ -259,8 +264,8 @@ a:hover { color: var(--gold-lt); }
 
 .card {
   border-radius: 20px;
-  background: var(--surface);
-  border: 1px solid var(--surface-bd);
+  background: var(--card);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
 }
 
 .field {
@@ -268,15 +273,15 @@ a:hover { color: var(--gold-lt); }
   display: block;
   padding: 17px 18px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, .045);
-  border: 1px solid var(--line);
-  font-family: Archivo, sans-serif;
+  background: var(--card);
+  border: 1px solid transparent;
+  font-family: var(--sf);
   font-size: 15px;
   color: var(--ink);
   outline: none;
 }
 .field::placeholder { color: rgba(242, 240, 236, .35); }
-.field:focus { border-color: rgba(217, 164, 65, .5); }
+.field:focus { border-color: rgba(242, 240, 236, .28); }
 
 .field--pill {
   padding: 19px 22px;
@@ -307,7 +312,7 @@ a:hover { color: var(--gold-lt); }
 .q__text {
   margin-top: 24px;
   text-align: center;
-  font-family: var(--serif);
+  font-family: var(--sf);
   font-size: 26px;
   line-height: 1.25;
   color: rgba(242, 240, 236, .9);
@@ -328,10 +333,10 @@ a:hover { color: var(--gold-lt); }
   padding: 14px 16px;
   border-radius: 999px;
   cursor: pointer;
-  background: rgba(255, 255, 255, .045);
-  border: 1px solid rgba(255, 255, 255, .09);
+  background: var(--card);
+  border: 1px solid transparent;
 }
-.opt:hover { filter: brightness(1.15); }
+.opt:hover { background: var(--card-on); }
 
 .opt__n {
   width: 30px;
@@ -343,8 +348,8 @@ a:hover { color: var(--gold-lt); }
   justify-content: center;
   font-size: 12.5px;
   font-weight: 700;
-  background: rgba(217, 164, 65, .22);
-  color: var(--gold-lt);
+  background: rgba(255, 255, 255, .08);
+  color: rgba(242, 240, 236, .6);
 }
 
 .opt__label {
@@ -352,15 +357,9 @@ a:hover { color: var(--gold-lt); }
   font-weight: 500;
 }
 
-.opt.is-on {
-  background: rgba(217, 164, 65, .16);
-  border-color: rgba(217, 164, 65, .55);
-}
-.opt.is-on .opt__label { color: var(--cream); }
-.opt.is-on .opt__n {
-  background: var(--gold-grad);
-  color: var(--on-gold);
-}
+.opt.is-on { background: var(--card-on); border-color: rgba(242, 240, 236, .28); }
+.opt.is-on .opt__label { color: var(--ink); }
+.opt.is-on .opt__n { background: var(--ink); color: #0a0a0b; }
 
 .skip {
   margin-top: auto;
@@ -392,15 +391,11 @@ a:hover { color: var(--gold-lt); }
   cursor: pointer;
   font-size: 15px;
   font-weight: 600;
-  background: rgba(255, 255, 255, .045);
-  border: 1px solid var(--line);
+  background: var(--card);
+  border: 1px solid transparent;
   color: var(--ink);
 }
-.age.is-on {
-  background: rgba(217, 164, 65, .18);
-  border-color: rgba(217, 164, 65, .55);
-  color: var(--cream);
-}
+.age.is-on { background: rgba(242, 240, 236, .9); border-color: transparent; color: #0f0f11; }
 
 /* ---------------------------------------------------------------- calculating */
 
@@ -422,7 +417,7 @@ a:hover { color: var(--gold-lt); }
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 70px rgba(217, 164, 65, .25);
+
 }
 
 .ring__hole {
@@ -434,7 +429,7 @@ a:hover { color: var(--gold-lt); }
 
 .ring__pct {
   position: relative;
-  font-family: var(--serif);
+  font-family: var(--sf);
   font-size: 62px;
   color: var(--cream);
 }
@@ -445,7 +440,7 @@ a:hover { color: var(--gold-lt); }
 
 .check-badge {
   border-radius: 50%;
-  background: var(--gold-grad);
+  background: var(--gold);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -470,13 +465,13 @@ a:hover { color: var(--gold-lt); }
   width: 86px;
   height: 152px;
   border-radius: 16px;
-  background: linear-gradient(180deg, #f0cd85, #b8802b);
+  background: var(--gold);
   display: flex;
   justify-content: center;
   padding-top: 12px;
   font-size: 25px;
-  font-weight: 700;
-  color: var(--on-gold);
+  font-weight: 600;
+  color: #1a1408;
 }
 
 .bar-avg {
@@ -493,14 +488,14 @@ a:hover { color: var(--gold-lt); }
   width: 100%;
   height: 95px;
   border-radius: 15px;
-  background: rgba(217, 164, 65, .28);
-  border: 1px solid rgba(217, 164, 65, .35);
+  background: rgba(255, 255, 255, .16);
+  border: 0;
   display: flex;
   justify-content: center;
   padding-top: 10px;
   font-size: 23px;
-  font-weight: 700;
-  color: var(--cream);
+  font-weight: 600;
+  color: rgba(242, 240, 236, .8);
 }
 
 .bar-label { font-size: 12.5px; font-weight: 600; }
@@ -513,8 +508,8 @@ a:hover { color: var(--gold-lt); }
 .banner {
   padding: 17px;
   border-radius: 20px;
-  background: var(--gold-grad);
-  color: var(--on-gold);
+  background: var(--card);
+  color: rgba(242, 240, 236, .78);
   font-size: 15.5px;
   font-weight: 600;
   line-height: 1.35;
@@ -543,15 +538,11 @@ a:hover { color: var(--gold-lt); }
   padding: 14px 16px;
   border-radius: 22px;
   cursor: pointer;
-  background: rgba(255, 255, 255, .04);
-  border: 1px solid rgba(255, 255, 255, .085);
+  background: var(--card);
+  border: 1px solid transparent;
   color: rgba(242, 240, 236, .92);
 }
-.pickrow.is-on {
-  background: rgba(217, 164, 65, .14);
-  border-color: rgba(217, 164, 65, .5);
-  color: var(--cream);
-}
+.pickrow.is-on { background: var(--card-on); color: var(--ink); }
 
 .dot {
   width: 22px;
@@ -563,8 +554,8 @@ a:hover { color: var(--gold-lt); }
 }
 .pickrow.is-on .dot,
 .goal.is-on .dot {
-  border-color: var(--gold-lt);
-  background: var(--gold-lt);
+  border-color: var(--green);
+  background: var(--green);
 }
 
 .pickrow__label { font-size: 14.5px; line-height: 1.3; }
@@ -592,8 +583,9 @@ a:hover { color: var(--gold-lt); }
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(217, 164, 65, .28);
-  animation: floaty 6s ease-in-out infinite;
+  border: 1px solid rgba(255, 255, 255, .1);
+  background: var(--card) !important;
+  box-shadow: none !important;
 }
 
 .orb__glyph {
@@ -615,7 +607,7 @@ a:hover { color: var(--gold-lt); }
 .slide__body {
   margin-top: 16px;
   text-align: center;
-  font-family: var(--serif);
+  font-family: var(--sf);
   font-size: 20px;
   line-height: 1.4;
   color: rgba(242, 240, 236, .62);
@@ -648,18 +640,10 @@ a:hover { color: var(--gold-lt); }
   padding: 16px;
   border-radius: 22px;
   cursor: pointer;
-  background: rgba(255, 255, 255, .035);
-  border: 1px solid rgba(255, 255, 255, .08);
+  background: var(--card);
+  border: 1px solid transparent;
 }
-.goal.is-on { border-color: rgba(217, 164, 65, .4); }
-
-.goal__icon {
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, .14);
-}
+.goal.is-on { background: var(--card-on); }
 
 .goal__label { flex: 1; font-size: 15px; font-weight: 600; line-height: 1.25; }
 
@@ -681,7 +665,7 @@ a:hover { color: var(--gold-lt); }
   height: 44px;
   border-radius: 50%;
   background: radial-gradient(circle at 38% 30%, #2a2418, #111113);
-  border: 1px solid rgba(217, 164, 65, .4);
+  border: 1px solid rgba(255, 255, 255, .12);
 }
 
 /* ---------------------------------------------------------------- path */
@@ -725,22 +709,22 @@ a:hover { color: var(--gold-lt); }
 .review {
   padding: 14px;
   border-radius: 18px;
-  background: var(--surface);
-  border: 1px solid var(--surface-bd);
+  background: var(--card);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
 }
 
 .review__initial {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: rgba(217, 164, 65, .2);
-  border: 1px solid rgba(217, 164, 65, .3);
+  background: rgba(255, 255, 255, .08);
+  border: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
   font-weight: 700;
-  color: var(--gold-lt);
+  color: rgba(242, 240, 236, .7);
 }
 
 /* ---------------------------------------------------------------- referral / notify */
@@ -771,7 +755,7 @@ a:hover { color: var(--gold-lt); }
 .ready__bg {
   position: absolute;
   inset: 0;
-  background: radial-gradient(90% 55% at 50% 12%, rgba(217, 164, 65, .22) 0%, rgba(10, 10, 11, .97) 62%), var(--bg);
+  background: var(--bg);
 }
 
 .ready {
@@ -802,8 +786,7 @@ a:hover { color: var(--gold-lt); }
   padding: 16px 18px;
   border-radius: 20px;
   background: rgba(255, 255, 255, .04);
-  border: 1px solid rgba(217, 164, 65, .28);
-  box-shadow: 0 0 22px rgba(217, 164, 65, .09);
+  border: 0;
 }
 
 .sheet {
@@ -867,13 +850,10 @@ a:hover { color: var(--gold-lt); }
 .plan__note { margin-top: 2px; font-size: 12px; color: #7c766c; }
 
 .cta--dark {
-  background: linear-gradient(180deg, #2a2418, #141310);
-  color: var(--cream);
-  padding: 18px;
-  font-size: 14.5px;
-  letter-spacing: 2.4px;
+  background: #141310;
+  color: var(--ink);
 }
-.cta--dark:hover { filter: brightness(1.12); }
+.cta--dark:hover { filter: brightness(1.4); }
 
 /* ---------------------------------------------------------------- commitment arc */
 
@@ -901,8 +881,8 @@ a:hover { color: var(--gold-lt); }
   flex: 0 0 40px;
   height: 40px;
   border-radius: 12px;
-  background: rgba(217, 164, 65, .12);
-  border: 1px solid rgba(217, 164, 65, .22);
+  background: rgba(255, 255, 255, .06);
+  border: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -954,7 +934,7 @@ a:hover { color: var(--gold-lt); }
   border: 0;
   background: none;
   color: var(--ink);
-  font-family: Archivo, sans-serif;
+  font-family: var(--sf);
   font-size: 22px;
   font-weight: 700;
   color-scheme: dark;
@@ -967,8 +947,8 @@ a:hover { color: var(--gold-lt); }
   margin-top: 26px;
   padding: 18px;
   border-radius: 20px;
-  background: rgba(217, 164, 65, .1);
-  border: 1px solid rgba(217, 164, 65, .25);
+  background: var(--card);
+  border: 0;
   text-align: center;
 }
 
@@ -987,7 +967,7 @@ a:hover { color: var(--gold-lt); }
 
 .realize__title {
   margin-top: 46px;
-  font-family: var(--serif);
+  font-family: var(--sf);
   font-size: 34px;
   line-height: 1.2;
   color: var(--cream);
@@ -1024,3 +1004,43 @@ a:hover { color: var(--gold-lt); }
   margin-right: -11px;
   justify-content: center;
 }
+
+/* Apple's app picker is native, so onboarding shows a row that opens it
+   rather than a list Sworn could never actually act on. */
+.picker-row {
+  margin-top: 11px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 17px 18px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--sf);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.picker-row__value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+  color: rgba(242, 240, 236, .55);
+}
+
+.picker-note {
+  margin-top: 9px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: rgba(242, 240, 236, .38);
+}
+
+.chev { color: rgba(242, 240, 236, .3); font-size: 17px; }
+
+/* The analysis already has one gold element in the score bar. */
+.check-badge--plain { background: rgba(255, 255, 255, .14); }
+.check-badge--plain svg { stroke: var(--ink); }

@@ -29,14 +29,13 @@ const SYMPTOM_DEFS = [
 ];
 
 const GOAL_DEFS = [
-  'Improved self-control', 'Stronger relationships', 'Improved mood and happiness',
-  'More energy and motivation', 'Improved focus and clarity', 'Pure and healthy mind'
+  'Come closer to God', 'Improved self-control', 'Stronger relationships',
+  'Improved mood and happiness', 'More energy and motivation',
+  'Improved focus and clarity', 'Pure and healthy mind'
 ];
 
-const GOAL_TINTS = [
-  'rgba(120,170,200,.16)', 'rgba(200,110,120,.16)', 'rgba(217,190,90,.16)',
-  'rgba(210,140,70,.16)', 'rgba(170,120,200,.16)', 'rgba(120,190,150,.16)'
-];
+/* The design had six competing tints. One neutral reads as a set. */
+const GOAL_TINTS = new Array(7).fill('rgba(255,255,255,.10)');
 
 const EDU_SLIDES = [
   ['PORN IS A DRUG', "Using porn releases a chemical in the brain called dopamine. This chemical makes you feel good – it's why you feel pleasure when you watch porn.", '◉'],
@@ -88,7 +87,6 @@ const PLAN_DEFS = [
 // Placeholder result from the design — not yet derived from the answers.
 const SCORE = 64;
 const AVERAGE = 40;
-const RESET_DAYS = 90;
 
 // ---------------------------------------------------------------- step map
 
@@ -118,6 +116,26 @@ const REFERRAL = 36;
 const NOTIFY = 37;
 const READY = 38;
 const PAYWALL = 39;
+
+// ---------------------------------------------------------------- native bridge
+
+/* Inside the app, app blocking uses Apple's own picker — the tokens it returns
+   are opaque, so a hand-rolled list could never drive real blocking. In a
+   browser there is no host, and the list stands in so the design previews. */
+const NATIVE = typeof window !== 'undefined' && window.__swornNative === true;
+const native = (msg) => window.webkit?.messageHandlers?.sworn?.postMessage(msg);
+
+/** Onboarding seeds oath 1, so that is what the picker writes against. */
+const ONBOARDING_OATH_ID = 1;
+let shieldCount = 0;
+
+window.sworn = {
+  onAuth() { /* nothing to redraw here */ },
+  onCounts(counts) {
+    shieldCount = (counts && counts[ONBOARDING_OATH_ID]) || 0;
+    render();
+  }
+};
 
 // ---------------------------------------------------------------- state
 
@@ -158,13 +176,6 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => (
 
 const on = (cond) => (cond ? ' is-on' : '');
 
-/** Target quit date: today plus the length of the reset programme. */
-function quitDate() {
-  const d = new Date();
-  d.setDate(d.getDate() + RESET_DAYS);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
 /** Which carousel, if any, the current step falls inside. */
 function slideSet() {
   if (S.step >= EDU && S.step < FEAT) return { set: EDU_SLIDES, base: EDU, edu: true };
@@ -184,6 +195,10 @@ function go(step) {
    browser there is no native host, so just walk to the main page. */
 function finishOnboarding() {
   setWhyField('committed', true);
+  if (NATIVE) {
+    const p = loadProtect();
+    native({ action: 'sync', oaths: [{ id: ONBOARDING_OATH_ID, time: p.from, until: p.to, days: p.days, on: true }] });
+  }
   if (window.webkit?.messageHandlers?.sworn) {
     window.webkit.messageHandlers.sworn.postMessage({ action: 'onboarded' });
     return;
@@ -285,8 +300,8 @@ function finallyScreen() {
           <button type="button" class="age${on(S.age === label)}" data-act="age" data-i="${i}"
             role="radio" aria-checked="${S.age === label}">${esc(label)}</button>`).join('')}
       </div>
-      <button class="cta${ready ? '' : ' cta--muted'}" style="margin-top:auto;font-size:15px;letter-spacing:3px"
-        data-act="next"${ready ? '' : ' disabled'}>COMPLETE QUIZ</button>
+      <button class="cta${ready ? '' : ' cta--muted'}" style="margin-top:auto;"
+        data-act="next"${ready ? '' : ' disabled'}>Complete quiz</button>
     </div>`;
 }
 
@@ -310,7 +325,7 @@ function analysis() {
       ${backCircle()}
       <div style="margin-top:14px;display:flex;align-items:center;gap:12px">
         <div style="font-size:22px;font-weight:700;letter-spacing:3.2px;line-height:1.1">ANALYSIS COMPLETE</div>
-        <div class="check-badge" style="width:28px;height:28px;flex:0 0 28px">${CHECK(15)}</div>
+        <div class="check-badge check-badge--plain" style="width:28px;height:28px;flex:0 0 28px">${CHECK(15)}</div>
       </div>
       <div class="serif" style="margin-top:11px;font-size:21px;color:rgba(242,240,236,.55);text-wrap:pretty">We've got some news to break to you...</div>
 
@@ -328,9 +343,9 @@ function analysis() {
         </div>
       </div>
 
-      <div style="margin-top:16px;text-align:center;font-size:15px;font-weight:600"><span style="color:#e7bc6a">${SCORE}%</span> higher dependence on porn</div>
+      <div style="margin-top:16px;text-align:center;font-size:15px;font-weight:600"><span>${SCORE}%</span> higher dependence on porn</div>
       <div style="margin-top:8px;text-align:center;font-size:11.5px;color:rgba(242,240,236,.35);line-height:1.5">* This result is an indication only, not a medical diagnosis.</div>
-      <button class="cta cta--glow" style="margin-top:auto;font-size:14px;letter-spacing:2.4px" data-act="next">CHECK YOUR SYMPTOMS →</button>
+      <button class="cta cta--glow" style="margin-top:auto;" data-act="next">Check your symptoms</button>
     </div>`;
 }
 
@@ -339,7 +354,7 @@ function symptoms() {
     <div class="screen symptoms anim-rise">
       <div class="topbar" style="padding:0 22px">
         ${backCircle()}
-        <div class="topbar__title" style="font-size:15px;letter-spacing:3.4px">SYMPTOMS</div>
+        <div class="topbar__title">SYMPTOMS</div>
       </div>
       <div class="scroll" style="top:54px;bottom:98px">
         <div class="banner">Excessive porn use can have negative impacts psychologically.</div>
@@ -360,7 +375,7 @@ function symptoms() {
         <div style="height:26px"></div>
       </div>
       <div class="footer-bar">
-        <button class="cta cta--glow" style="font-size:14px;letter-spacing:2.6px" data-act="next">REBOOT MY BRAIN →</button>
+        <button class="cta cta--glow" data-act="next">Reboot my brain</button>
       </div>
     </div>`;
 }
@@ -409,8 +424,7 @@ function goals() {
           ${GOAL_DEFS.map((label, i) => {
             const sel = S.goals.includes(i);
             return `
-            <button type="button" class="goal${on(sel)}" style="${sel ? `background:${GOAL_TINTS[i]}` : ''}" data-act="goal" data-i="${i}" aria-pressed="${sel}">
-              <span class="goal__icon" style="background:${GOAL_TINTS[i].replace('.16', '.5')}"></span>
+            <button type="button" class="goal${on(sel)}" data-act="goal" data-i="${i}" aria-pressed="${sel}">
               <span class="goal__label">${esc(label)}</span>
               <span class="dot"></span>
             </button>`;
@@ -419,7 +433,7 @@ function goals() {
         <div style="height:24px"></div>
       </div>
       <div class="footer-bar">
-        <button class="cta cta--glow" style="font-size:14px;letter-spacing:2.6px" data-act="next">TRACK THESE GOALS →</button>
+        <button class="cta cta--glow" data-act="next">Track these goals</button>
       </div>
     </div>`;
 }
@@ -450,7 +464,7 @@ function whyScreen() {
         <div style="height:24px"></div>
       </div>
       <div class="footer-bar">
-        <button class="cta cta--glow" style="font-size:14px;letter-spacing:2.6px" data-act="next">SAVE MY WHY →</button>
+        <button class="cta cta--glow" data-act="next">Save my why</button>
       </div>
     </div>`;
 }
@@ -464,7 +478,7 @@ function realizeScreen() {
       ${backCircle()}
       <div class="realize__title">${esc(title)}</div>
       <div class="realize__body">${esc(body)}</div>
-      <button class="cta cta--glow" style="margin-top:auto;font-size:14px;letter-spacing:2.4px" data-act="next">CONTINUE →</button>
+      <button class="cta cta--glow" style="margin-top:auto;" data-act="next">Continue</button>
     </div>`;
 }
 
@@ -485,7 +499,7 @@ function writeScreen({ title, prompt, field, placeholder, cta }) {
         <div style="height:24px"></div>
       </div>
       <div class="footer-bar">
-        <button class="cta cta--glow${value.trim() ? '' : ' cta--muted'}" style="font-size:14px;letter-spacing:2.6px"
+        <button class="cta cta--glow${value.trim() ? '' : ' cta--muted'}"
           data-act="next" id="writecta"${value.trim() ? '' : ' disabled'}>${cta}</button>
       </div>
     </div>`;
@@ -520,7 +534,7 @@ function reflectScreen() {
       <div class="serif" style="margin-top:18px;font-size:27px;line-height:1.3;color:#f4e6c8;text-wrap:pretty">“${esc(commitmentQuote())}”</div>
       <div style="margin-top:34px;font-size:17px;font-weight:600;line-height:1.4">Don't forget why you're here.</div>
       <div style="margin-top:14px;font-size:15px;line-height:1.55;color:rgba(242,240,236,.55);text-wrap:pretty">You're not downloading another app to remind you that you should stop. You're here to actually stop.</div>
-      <button class="cta cta--glow" style="margin-top:auto;font-size:14px;letter-spacing:2.4px" data-act="next">MAKE THE COMMITMENT →</button>
+      <button class="cta cta--glow" style="margin-top:auto;" data-act="next">Make the commitment</button>
     </div>`;
 }
 
@@ -546,7 +560,7 @@ function commitScreen() {
       </div>
 
       <div style="margin-top:auto;text-align:center;font-size:17px;font-weight:600">Are you ready to commit?</div>
-      <button class="cta cta--glow" style="margin-top:16px;font-size:15px;letter-spacing:3px" data-act="commit">I'M READY</button>
+      <button class="cta cta--glow" style="margin-top:16px;" data-act="commit">I'm ready</button>
       <button type="button" class="skip" style="margin-top:14px;flex:0 0 auto" data-act="back">Not yet</button>
     </div>`;
 }
@@ -586,6 +600,13 @@ function protectScreen() {
         </div>
 
         <div class="field-label" style="margin-top:24px">Apps to protect</div>
+        ${NATIVE ? `
+        <button type="button" class="picker-row" data-act="pick-apps">
+          <span>Choose apps</span>
+          <span class="picker-row__value">${shieldCount ? shieldCount + (shieldCount === 1 ? ' app' : ' apps') : 'None yet'}<span class="chev">›</span></span>
+        </button>
+        <div class="picker-note">Uses Apple's own picker, so Sworn never learns which apps you chose.</div>
+        ` : `
         <div style="margin-top:11px;display:flex;flex-direction:column;gap:10px">
           ${PROTECT_APPS.map((name) => {
             const sel = p.apps.includes(name);
@@ -595,19 +616,21 @@ function protectScreen() {
               <span class="pickrow__label">${esc(name)}</span>
             </button>`;
           }).join('')}
-        </div>
+        </div>`}
 
         <div class="protect-summary">
           <div class="protect-summary__win">${esc(p.from)}–${esc(p.to)}</div>
-          <div class="protect-summary__apps">${p.apps.length ? esc(p.apps.join(', ')) + ' blocked' : 'Choose at least one app'}</div>
+          <div class="protect-summary__apps">${NATIVE
+            ? (shieldCount ? shieldCount + (shieldCount === 1 ? ' app' : ' apps') + ' blocked' : 'Choose at least one app')
+            : (p.apps.length ? esc(p.apps.join(', ')) + ' blocked' : 'Choose at least one app')}</div>
           <div class="protect-summary__note">Sworn automatically protects you.</div>
         </div>
         <div style="height:24px"></div>
       </div>
 
       <div class="footer-bar">
-        <button class="cta cta--glow${p.apps.length ? '' : ' cta--muted'}" style="font-size:14px;letter-spacing:2.4px"
-          data-act="next" id="protectcta"${p.apps.length ? '' : ' disabled'}>PROTECT THESE HOURS →</button>
+        ${(() => { const ready = NATIVE ? shieldCount > 0 : p.apps.length > 0; return `
+        <button class="cta${ready ? '' : ' cta--muted'}" data-act="next" id="protectcta"${ready ? '' : ' disabled'}>Protect these hours</button>`; })()}
       </div>
     </div>`;
 }
@@ -617,7 +640,7 @@ function benefits() {
     <div class="screen benefits anim-rise-fast">
       <div class="topbar" style="padding:0 22px">
         ${backCircle()}
-        <div class="topbar__title" style="font-size:14px;letter-spacing:3.2px">REWIRING BENEFITS</div>
+        <div class="topbar__title">REWIRING BENEFITS</div>
       </div>
       <div class="scroll" style="top:54px;bottom:98px">
         ${QUOTE_DEFS.map(([name, head, body]) => `
@@ -633,7 +656,7 @@ function benefits() {
         <div style="height:24px"></div>
       </div>
       <div class="footer-bar">
-        <button class="cta" data-act="next">CONTINUE →</button>
+        <button class="cta" data-act="next">Continue</button>
       </div>
     </div>`;
 }
@@ -643,7 +666,7 @@ function path() {
     <div class="screen path anim-rise-fast">
       <div class="topbar">
         ${backCircle()}
-        <div class="topbar__title" style="font-size:14px;letter-spacing:3.2px">REWIRING BENEFITS</div>
+        <div class="topbar__title">REWIRING BENEFITS</div>
       </div>
       <div style="margin-top:36px;font-size:26px;font-weight:700;letter-spacing:3.8px;line-height:1.15">YOUR PATH TO FREEDOM</div>
       <div class="serif" style="margin-top:12px;font-size:20px;color:rgba(242,240,236,.55)">With Sworn, recovery is possible</div>
@@ -664,7 +687,7 @@ function path() {
         <span class="dim"><span class="swatch" style="background:#8f8f96"></span>Without</span>
         <span class="dim">✕ Relapses</span>
       </div>
-      <button class="cta" style="margin-top:auto" data-act="next">CONTINUE →</button>
+      <button class="cta" style="margin-top:auto" data-act="next">Continue</button>
     </div>`;
 }
 
@@ -694,7 +717,7 @@ function rating() {
             <div style="margin-top:8px;font-size:12.5px;line-height:1.4;color:rgba(242,240,236,.55)">${esc(text)}</div>
           </div>`).join('')}
       </div>
-      <button class="cta" style="margin-top:auto" data-act="next">NEXT →</button>
+      <button class="cta" style="margin-top:auto" data-act="next">Next</button>
     </div>`;
 }
 
@@ -705,7 +728,7 @@ function referral() {
       <div style="margin-top:20px;font-size:25px;font-weight:700;letter-spacing:4px;line-height:1.2">DO YOU HAVE A REFERRAL CODE?</div>
       <div class="serif" style="margin-top:12px;font-size:20px;color:rgba(242,240,236,.5)">You can skip this step.</div>
       <input class="field field--pill" style="margin-top:auto;margin-bottom:auto" data-bind="referral" value="${esc(S.referral)}" placeholder="Referral Code">
-      <button class="cta" data-act="next">NEXT →</button>
+      <button class="cta" data-act="next">Next</button>
     </div>`;
 }
 
@@ -716,7 +739,7 @@ function notify() {
       <div style="margin-top:120px">${BELL}</div>
       <div style="margin-top:40px;text-align:center;font-size:25px;font-weight:700;letter-spacing:3.8px;line-height:1.2">STAY ON TRACK WITH REMINDERS</div>
       <div class="serif" style="margin-top:18px;text-align:center;font-size:20px;line-height:1.4;color:rgba(242,240,236,.55);text-wrap:pretty">Get gentle reminders and motivation so you never lose sight of your goals.</div>
-      <button class="cta cta--glow" style="margin-top:auto;letter-spacing:2.4px" data-act="next">ENABLE NOTIFICATIONS →</button>
+      <button class="cta cta--glow" style="margin-top:auto;letter-spacing:2.4px" data-act="next">Enable notifications</button>
       <button type="button" class="notlater" data-act="next">Not now</button>
     </div>`;
 }
@@ -727,12 +750,10 @@ function planReady() {
     <div class="screen ready anim-rise-fast">
       <div class="check-badge" style="width:34px;height:34px">${CHECK(18)}</div>
       <div style="margin-top:18px;text-align:center;font-size:25px;font-weight:700;letter-spacing:3.6px;line-height:1.2">WE'VE MADE YOU A CUSTOM PLAN</div>
-      <div style="margin-top:26px;font-size:12px;letter-spacing:2.6px;font-weight:700;color:rgba(242,240,236,.45)">YOU WILL QUIT PORN BY</div>
-      <div class="date-pill">${esc(quitDate())}</div>
       <div class="rule"></div>
       <div class="stars" style="margin-top:30px;gap:5px">${STAR(22).repeat(5)}</div>
       <div class="serif" style="margin-top:24px;text-align:center;font-size:26px;line-height:1.25">Become the best of yourself with Sworn</div>
-      <button class="cta cta--cream" style="margin-top:auto;font-size:15px;letter-spacing:2.6px" data-act="next">BECOME SWORN</button>
+      <button class="cta cta--cream" style="margin-top:auto;" data-act="next">Become Sworn</button>
       <div style="margin-top:14px;text-align:center;font-size:11.5px;font-weight:600;color:rgba(242,240,236,.42);line-height:1.6">Purchase appears discretely<br>Cancel anytime</div>
     </div>`;
 }
@@ -774,7 +795,7 @@ function paywall() {
           </button>`).join('')}
         </div>
         <div style="margin-top:12px;text-align:center;font-size:12.5px;color:#6d675e">No commitment, cancel anytime</div>
-        <button class="cta cta--dark" style="margin-top:12px" data-act="finish">START MY JOURNEY TODAY</button>
+        <button class="cta cta--dark" style="margin-top:12px" data-act="finish">Start my journey</button>
       </div>
     </div>`;
 }
@@ -843,6 +864,7 @@ document.getElementById('phone').addEventListener('click', (e) => {
       saveProtect(p);
       return render();
     }
+    case 'pick-apps': return native({ action: 'pick', oathId: ONBOARDING_OATH_ID });
     case 'protect-app': {
       const p = loadProtect();
       const name = el.dataset.app;
