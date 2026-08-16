@@ -158,19 +158,28 @@ function loadProgress() {
   }
   const since = typeof p.since === 'number' ? p.since : null;
   const oathAt = typeof p.oathAt === 'number' ? p.oathAt : since;
-  const daysSworn = since ? Math.max(0, Math.floor((Date.now() - since) / 864e5)) : 0;
-  return { since, oathAt, daysSworn };
+  // Calendar days, so the counter ticks at midnight like a person expects,
+  // not at whatever hour the oath happened to be sworn.
+  const dayStart = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const daysSworn = since ? Math.max(0, Math.round((dayStart(Date.now()) - dayStart(since)) / 864e5)) : 0;
+  // The longest run ever, which a lapse must not erase — achievements keep it.
+  const best = Math.max(typeof p.best === 'number' ? p.best : 0, daysSworn);
+  return { since, oathAt, best, daysSworn };
 }
 
 function saveProgress(p) {
-  const record = { since: p.since ?? null, oathAt: p.oathAt ?? p.since ?? null };
+  const record = {
+    since: p.since ?? null,
+    oathAt: p.oathAt ?? p.since ?? null,
+    best: typeof p.best === 'number' ? p.best : 0
+  };
   try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(record)); } catch (e) { /* blocked */ }
 }
 
 /** The commitment moment. Starts (or restarts) the streak; keeps the oath date. */
 function startStreak() {
   const p = loadProgress();
-  saveProgress({ since: Date.now(), oathAt: p.oathAt || Date.now() });
+  saveProgress({ since: Date.now(), oathAt: p.oathAt || Date.now(), best: p.best });
   pushProfile();
 }
 
@@ -347,8 +356,10 @@ function recordLapse(note) {
   // The note stays on this device, full stop. Only the moment syncs.
   urge.lapses.push({ at, note: (note || '').trim() });
   saveUrge(urge);
+  // loadProgress folds the streak that just ended into `best` before the
+  // reset, so the earned tiers survive the restart.
   const p = loadProgress();
-  saveProgress({ since: at, oathAt: p.oathAt });
+  saveProgress({ since: at, oathAt: p.oathAt, best: p.best });
   pushEvent('commitment_broken', at);
   pushProfile();
 }
@@ -382,9 +393,13 @@ function beginUrge(minutes) {
   const urge = loadUrge();
   const until = at + (minutes || URGE_MINUTES) * 60_000;
   urge.until = until;
-  urge.log.push(at);
+  // Re-tapping during the same episode extends the shield but is one urge,
+  // not two — otherwise the analytics inflate themselves.
+  const last = urge.log.length ? urge.log[urge.log.length - 1] : 0;
+  const fresh = at - last > 600_000;
+  if (fresh) urge.log.push(at);
   saveUrge(urge);
-  pushEvent('protection_used', at);
+  if (fresh) pushEvent('protection_used', at);
   return until;
 }
 

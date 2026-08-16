@@ -8,7 +8,6 @@
 /* Behaviour-specific content lives in behavior.js. */
 const quiz = () => B().quiz;
 
-const AGE_OPTS = ['18–24', '25–34', '35–44', '45+'];
 const CALC_NOTES = ['Understanding responses', 'Weighing your triggers', 'Shaping your oath'];
 
 
@@ -83,33 +82,32 @@ const typicalScore = () => Math.round(SCORE_FLOOR + SCORE_SPAN * 0.5);
 const BEHAVIOR = 0;
 const QUIZ_START = 1;
 
-const FINALLY = 11;
-const CALCULATING = 12;
-const ANALYSIS = 13;
-const LIFE = 14;
-const SYMPTOMS = 15;
-const EDU = 16;
-const FEAT = 21;
-const GOALS = 27;
+const CALCULATING = 11;
+const ANALYSIS = 12;
+const LIFE = 13;
+const SYMPTOMS = 14;
+const EDU = 15;
+const FEAT = 20;
+const GOALS = 26;
 
 /* The commitment arc: why → what it cost → what changes → read it back →
    accept the friction. This is the part that turns "I want to stop" into
    "I'm making a commitment". */
-const WHY = 28;
-const WRITE = 29;
-const REALIZE = 30;
-const COST = 31;
-const REFLECT = 32;
-const COMMIT = 33;
-const VULNERABLE = 34;
-const PROTECT = 35;
+const WHY = 27;
+const WRITE = 28;
+const REALIZE = 29;
+const COST = 30;
+const REFLECT = 31;
+const COMMIT = 32;
+const VULNERABLE = 33;
+const PROTECT = 34;
 
-const BENEFITS = 36;
-const PATH = 37;
-const REFERRAL = 38;
-const NOTIFY = 39;
-const READY = 40;
-const PAYWALL = 41;
+const BENEFITS = 35;
+const PATH = 36;
+const REFERRAL = 37;
+const NOTIFY = 38;
+const READY = 39;
+const PAYWALL = 40;
 
 // ---------------------------------------------------------------- native bridge
 
@@ -145,8 +143,6 @@ const S = {
   step: 0,
   protSection: null,
   answers: {},
-  name: '',
-  age: null,
   pct: 0,
   symptoms: [],
   goals: [],
@@ -217,7 +213,6 @@ function finishOnboarding() {
 }
 
 function next() {
-  if (S.step === FINALLY) return startCalc();
   if (S.step === ANALYSIS && !B().lifeCost) return go(SYMPTOMS);
   if (S.step === SYMPTOMS) return go(EDU);
   go(S.step + 1);
@@ -252,7 +247,8 @@ function pickOption(i) {
   // Let the selected state land before advancing.
   setTimeout(() => {
     if (S.step !== from) return;
-    go(from >= QUIZ_START + quiz().length - 1 ? FINALLY : from + 1);
+    if (from >= QUIZ_START + quiz().length - 1) return startCalc();
+    go(from + 1);
   }, 190);
 }
 
@@ -265,8 +261,9 @@ function toggle(list, value) {
 // ---------------------------------------------------------------- screens
 
 function renderChrome() {
-  if (S.step > FINALLY) return '';
-  const progress = Math.round((Math.min(S.step, FINALLY) / FINALLY) * 100);
+  if (S.step >= CALCULATING) return '';
+  const total = QUIZ_START + quiz().length;
+  const progress = Math.round((Math.min(S.step, total) / total) * 100);
   return `
     <div class="chrome">
       ${S.step > 0
@@ -324,25 +321,6 @@ function question() {
           </button>`).join('')}
       </div>
       ${DEBUG_UI ? '<button type="button" class="skip" data-act="skip">Skip test</button>' : ''}
-    </div>`;
-}
-
-function finallyScreen() {
-  const ready = Boolean(S.age);
-  return `
-    <div class="screen finally">
-      <div class="eyebrow">FINALLY</div>
-      <div class="q__text" style="margin-top:22px">A little more about you</div>
-      <label class="field-label" style="margin-top:32px" for="name">Name</label>
-      <input class="field" style="margin-top:9px" id="name" data-bind="name" value="${esc(S.name)}" placeholder="Enter your name" autocomplete="given-name">
-      <div class="field-label" style="margin-top:22px" id="agelabel">Age</div>
-      <div class="ages" role="radiogroup" aria-labelledby="agelabel">
-        ${AGE_OPTS.map((label, i) => `
-          <button type="button" class="age${on(S.age === label)}" data-act="age" data-i="${i}"
-            role="radio" aria-checked="${S.age === label}">${esc(label)}</button>`).join('')}
-      </div>
-      <button class="cta${ready ? '' : ' cta--muted'}" style="margin-top:auto;"
-        data-act="next"${ready ? '' : ' disabled'}>Complete quiz</button>
     </div>`;
 }
 
@@ -405,8 +383,9 @@ function lifeCostYears() {
   const lc = B().lifeCost || { question: 1, hours: {} };
   const answer = S.answers[QUIZ_START + lc.question];
   const hours = lc.hours[answer] || 3;
-  const ageMid = { '18–24': 21, '25–34': 30, '35–44': 40, '45+': 50 }[S.age] || 21;
-  const remaining = Math.max(5, 80 - ageMid);
+  // A fixed sixty-year horizon: roughly a young adult carried to the average
+  // life expectancy. Deliberately round — the screen says it is approximate.
+  const remaining = 60;
   return { hours, years: Math.max(0.1, (hours / 24) * remaining) };
 }
 
@@ -421,7 +400,7 @@ function lifeScreen() {
         <span style="font-size:22px;font-weight:700;letter-spacing:3px">YEARS</span>
       </div>
       <div class="serif" style="margin-top:20px;font-size:24px;line-height:1.3;color:#f4e6c8;text-wrap:pretty">of your life will go to the feed if nothing changes.</div>
-      <div style="margin-top:16px;font-size:13px;line-height:1.55;color:rgba(242,240,236,.45);text-wrap:pretty">About ${hours} ${hours === 1 ? 'hour' : 'hours'} a day, carried to the average life expectancy of 80. An approximation, and a conservative one.</div>
+      <div style="margin-top:16px;font-size:13px;line-height:1.55;color:rgba(242,240,236,.45);text-wrap:pretty">About ${hours} ${hours === 1 ? 'hour' : 'hours'} a day, carried across the next sixty years. An approximation, and a conservative one.</div>
       <button class="cta cta--glow cta--muted" style="margin-top:auto;" id="lifecta" data-act="next" disabled>Continue</button>
     </div>`;
 }
@@ -912,7 +891,6 @@ function screenHtml() {
   const step = S.step;
   if (step === BEHAVIOR) return behaviorScreen();
   if (step >= QUIZ_START && step < QUIZ_START + quiz().length) return question();
-  if (step === FINALLY) return finallyScreen();
   if (step === CALCULATING) return calculating();
   if (step === ANALYSIS) return analysis();
   if (step === LIFE) return lifeScreen();
@@ -976,10 +954,10 @@ document.getElementById('phone').addEventListener('click', (e) => {
       // life-cost step only exists for behaviours that declare one.
       let target = S.step - 1;
       if (target === LIFE && !B().lifeCost) target = ANALYSIS;
-      if (target === CALCULATING) target = FINALLY;
+      if (target === CALCULATING) target = QUIZ_START + quiz().length - 1;
       return go(Math.max(0, target));
     }
-    case 'skip': return go(FINALLY);
+    case 'skip': return startCalc();
     case 'next': return next();
     case 'finish': return finishOnboarding();
     case 'notify-on':
@@ -987,15 +965,27 @@ document.getElementById('phone').addEventListener('click', (e) => {
       // onboarding moves on.
       if (NATIVE) native({ action: 'notify' });
       return next();
-    case 'restart': return go(0);
     case 'option': return pickOption(i);
-    case 'age': S.age = AGE_OPTS[i]; return render();
     case 'symptom': return toggle(S.symptoms, el.dataset.key);
     case 'goal':
       toggle(S.goals, i);
       setWhyField('goals', S.goals.slice());
       return render();
-    case 'behavior': saveBehavior(BEHAVIORS[i]); return render();
+    case 'behavior': {
+      const prev = behaviorChosen() ? loadBehavior() : null;
+      saveBehavior(BEHAVIORS[i]);
+      if (prev && prev !== BEHAVIORS[i]) {
+        // Reasons, goals and triggers are indices into the old behaviour's
+        // lists, and quiz answers share labels like "Yes" across behaviours —
+        // carrying any of it over silently changes its meaning.
+        const why = loadWhy();
+        why.reasons = []; why.goals = []; why.triggers = [];
+        saveWhy(why);
+        S.goals = [];
+        S.answers = {};
+      }
+      return render();
+    }
     case 'trigger': toggleWhyTrigger(i); return render();
     case 'reason': toggleWhyReason(i); return render();
     case 'prot-section': {
@@ -1073,7 +1063,6 @@ document.getElementById('phone').addEventListener('input', (e) => {
     return;
   }
   S[key] = e.target.value;
-  if (key === 'name') setUserName(e.target.value);
 });
 
 /* Onboarding always starts blank. The native app only shows this page for a

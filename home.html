@@ -21,7 +21,13 @@
 <script src="behavior.js"></script>
 <script src="why.js"></script>
 <!-- DEBUG builds only; stripped from the Release bundle. -->
-<script src="dev.js"></script>
+<script>
+/* dev.js is stripped from Release bundles; only ask for it when the debug
+   flag says it exists, so shipped builds never log a failed load. */
+if (window.__swornDebug === true || /[?&]debug=1\b/.test(location.search)) {
+  document.write('<script src="dev.js"><\/script>');
+}
+</script>
 <script src="home.js"></script>
 </body>
 </html>

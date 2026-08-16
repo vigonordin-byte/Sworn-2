@@ -115,7 +115,7 @@ window.SwornDev = (() => {
         const u = loadUrge();
         u.lapses.push({ at: Date.now() - 2 * 864e5, note: 'Late, scrolling in bed.' });
         saveUrge(u);
-        saveProgress({ since: Date.now() - 2 * 864e5, oathAt: Date.now() - 11 * 864e5 });
+        saveProgress({ since: Date.now() - 2 * 864e5, oathAt: Date.now() - 11 * 864e5, best: 9 });
         native({ action: 'devOnboarded', value: true });
         return { go: 'home.html', then: 'lapse' };
       }
@@ -220,6 +220,7 @@ window.SwornDev = (() => {
     }
     clearInterval(timer);
     S.left = Math.min(left, S.interventionSeconds);
+    S.ivEndsAt = Date.now() + S.left * 1000;
     paintCount();
   }
 

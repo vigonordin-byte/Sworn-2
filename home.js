@@ -143,7 +143,9 @@ function currentTier() {
 /** Per-tier visual values. v2 shows every tier fully lit, earned or not. */
 function tierView(i) {
   const d = TIERS[i];
-  const earned = S.daysSworn >= d.at;
+  // Earned rides the best run ever, so a lapse cannot un-earn a medal.
+  const best = loadProgress().best;
+  const earned = best >= d.at;
   const isCur = i === currentTier();
   return {
     ...d,
@@ -282,6 +284,7 @@ window.sworn = {
     render();
   },
   onCounts(counts) {
+    shieldCountsReady = true;
     shieldCounts = counts || {};
     render();
   }
@@ -515,7 +518,7 @@ function achievements() {
             <div class="tl__body">
               <div style="display:flex;align-items:center;gap:9px">
                 <div class="tl__name" style="color:${d.accent}">${d.name}</div>
-                ${i === cur ? '<div class="tl__now">NOW</div>' : ''}
+                ${i === cur ? '<div class="tl__now">NOW</div>' : t.earned ? '<div class="tl__now" style="color:#34c759;border-color:rgba(52,199,89,.4)">EARNED</div>' : ''}
               </div>
               <div class="tl__req">${d.at === 0 ? 'From the day you swear' : d.at + ' days sworn'}</div>
               <div class="tl__copy"><b style="color:rgba(242,240,236,.86);font-weight:600">${esc(B().tierLines[i])}</b> ${esc(TIER_COPY[i])}</div>
@@ -598,6 +601,17 @@ function decisionBar() {
     </div>`;
 }
 
+/* Whether any stored selection could shield anything right now. Until the
+   first counts arrive from the native side, assume yes rather than flash a
+   false "nothing picked". */
+let shieldCountsReady = false;
+
+function anythingShielded() {
+  if (!NATIVE) return OATHS.some((o) => o.apps.length > 0);
+  if (!shieldCountsReady) return true;
+  return Object.values(shieldCounts).some((bd) => selectionTotal(bd) > 0);
+}
+
 const RING_CIRCUMFERENCE = 2 * Math.PI * 46;
 
 function intervention() {
@@ -606,16 +620,23 @@ function intervention() {
   /* Tapping "I'm tempted" is a success, not a confession. The first thing the
      user sees is that it worked, and that the decision is already taken. */
   if (S.view === 'protected') {
+    const covered = anythingShielded();
     return `
       <div class="intervene intervene--won">
         <div class="won__ring">${svg(SHIELD_CHECK, 40, '#34c759', 1.8)}</div>
-        <div class="won__title">PROTECTION ACTIVATED</div>
+        <div class="won__title">${covered ? 'PROTECTION ACTIVATED' : 'URGE CAUGHT'}</div>
         <div class="won__body">${esc(B().tempted)}</div>
+        ${covered ? `
         <div class="won__card">
           <div class="won__label">YOUR PROTECTED APPS ARE BLOCKED</div>
           <div class="won__until">Until ${urgeUntilLabel()}</div>
           <div class="won__note">${minutesLabel(urgeRemaining())} of protection · you don't need to act on this feeling</div>
-        </div>
+        </div>` : `
+        <div class="won__card">
+          <div class="won__label">NOTHING IS BLOCKED YET</div>
+          <div class="won__until">No apps picked</div>
+          <div class="won__note">Choose apps under Add protection so this moment can actually lock them</div>
+        </div>`}
         <button type="button" class="cta-gold" style="margin-top:auto" data-act="pause">TAKE 60 SECONDS</button>
         <button type="button" style="margin-top:14px;background:none;border:0;color:rgba(242,240,236,.4);font-family:var(--sf);font-size:14px;cursor:pointer" data-act="cancel">I'm alright now</button>
       </div>`;
@@ -720,7 +741,7 @@ function analyticsTab() {
         </span>
         <span class="chart" style="margin-top:16px;gap:${gap}px">${chart}</span>
         ${S.card === 1 ? `
-        <span class="axis" style="margin-top:8px"><span>${RANGE_AXIS[S.range]}</span><span>Today</span></span>
+        <span class="axis" style="margin-top:8px"><span>${bars.length >= RANGE_DAYS[S.range] ? RANGE_AXIS[S.range] : 'Day one'}</span><span>Today</span></span>
         <span class="an-card__more" style="display:block">${esc(STATS.rateNote)}</span>` : ''}
       </button>
 
@@ -976,7 +997,12 @@ function settingsTab() {
       <div class="group">
         ${settingsRow(BELL, 'Notifications', 'Daily')}
         ${settingsRow(EXPORT, 'Export my record', '', 'export')}
-        ${settingsRow(REPLAY, 'Replay onboarding', '', 'replay-onboarding')}
+        ${S.confirmReplay
+          ? `<button type="button" class="row dev-row--danger" data-act="replay-onboarding">
+              <span class="row__left">${svg(REPLAY, 20, '#e88178')}<span class="row__name" style="color:#e88178">Tap again to confirm</span></span>
+              <span class="row__value" style="color:#e88178">Resets your answers<span class="chev">›</span></span>
+            </button>`
+          : settingsRow(REPLAY, 'Replay onboarding', '', 'replay-onboarding')}
       </div>
 
       <div class="group-label" style="margin-top:24px">SUBSCRIPTION</div>
@@ -1210,6 +1236,9 @@ function screenHtml() {
 }
 
 function render() {
+  // Recomputed every paint: iOS keeps the page alive for days, and a counter
+  // cached at load would quietly fall behind the calendar.
+  S.daysSworn = loadProgress().daysSworn;
   document.getElementById('backdrop').innerHTML = backdrop();
   document.getElementById('screen').innerHTML = screenHtml();
   document.getElementById('nav').innerHTML = nav();
@@ -1266,14 +1295,14 @@ function startIntervention(mode, oathId) {
   S.ivOathId = oathId ?? null;
   S.ivAction = PHYSICAL_ACTIONS[Math.floor(Math.random() * PHYSICAL_ACTIONS.length)];
   S.left = S.interventionSeconds;
+  // Anchored to the clock, not to interval ticks: backgrounding the app
+  // suspends timers, and the count must mean real elapsed seconds.
+  S.ivEndsAt = Date.now() + S.interventionSeconds * 1000;
   render();
 
   timer = setInterval(() => {
-    S.left -= 1;
-    if (S.left <= 0) {
-      S.left = 0;
-      clearInterval(timer);
-    }
+    S.left = Math.max(0, Math.ceil((S.ivEndsAt - Date.now()) / 1000));
+    if (S.left <= 0) clearInterval(timer);
     paintCount();
   }, 1000);
 }
@@ -1311,6 +1340,7 @@ document.getElementById('phone').addEventListener('click', (e) => {
   switch (el.dataset.act) {
     case 'tab':
       if (S.view !== 'home') { clearInterval(timer); S.view = 'home'; }
+      S.confirmReplay = false;
       S.tab = el.dataset.tab;
       return render();
     case 'tempted': return tapTempted();
@@ -1321,7 +1351,7 @@ document.getElementById('phone').addEventListener('click', (e) => {
       if (S.ivMode === 'voluntary') recordResist();
       return endIntervention();
     case 'iv-continue': return completeBypass();
-    case 'cancel':
+    case 'cancel': S.view = 'home'; return render();
     case 'lapse': S.view = 'lapse'; return render();
     case 'again': {
       const note = document.getElementById('lapsenote');
@@ -1440,6 +1470,10 @@ document.getElementById('phone').addEventListener('click', (e) => {
       S.devOpen = false;
       return SwornDev.jumpTo(Number(el.dataset.left));
     case 'replay-onboarding':
+      // Replaying wipes the written why and every choice the moment the
+      // onboarding page loads, so it must never fire on a stray tap.
+      if (!S.confirmReplay) { S.confirmReplay = true; return render(); }
+      S.confirmReplay = false;
       if (NATIVE) return native({ action: 'replayOnboarding' });
       try { localStorage.removeItem('sworn.onboarded'); } catch (e) { /* storage blocked */ }
       window.location.href = 'index.html';
@@ -1475,6 +1509,23 @@ document.getElementById('phone').addEventListener('input', (e) => {
 });
 
 render();
+
+/* Sign-in happens after onboarding, so the server may briefly hold the name
+   typed before it. Once Apple's name is here, it wins and re-syncs. */
+if (NATIVE && USER.name && loadSession().name !== USER.name) {
+  setUserName(USER.name);
+  pushProfile();
+}
+
+/* Coming back from the background: the calendar may have moved and a running
+   countdown must show real elapsed time, not frozen ticks. */
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  if (S.view === 'running' && S.ivEndsAt) {
+    S.left = Math.max(0, Math.ceil((S.ivEndsAt - Date.now()) / 1000));
+  }
+  render();
+});
 
 if (DEV) SwornDev.runPending();
 

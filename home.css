@@ -1529,3 +1529,18 @@ body { font-family: var(--sf); }
 }
 
 .row--static { cursor: default; }
+
+/* Short phones (SE class): tighten the column so the whole home tab,
+   I'm tempted included, fits without scrolling. */
+@media (max-height: 700px) {
+  .apphead { padding-top: 10px; }
+  .seal { width: 138px; height: 138px; }
+  .seal__big { font-size: 34px; }
+  .seal-wrap { margin-top: 6px; padding-top: 8px; }
+  .vow { margin-top: 12px; font-size: 15px; }
+  .card.prot { padding: 14px 16px; }
+  .actions { margin-top: 10px; }
+  .action { padding: 11px 13px 12px; }
+  .action__sub { display: none; }
+  .tempted { padding: 14px; }
+}
