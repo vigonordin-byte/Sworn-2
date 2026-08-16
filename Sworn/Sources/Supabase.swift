@@ -25,7 +25,7 @@ enum SupabaseConfig {
     /// The anon/publishable key from the Supabase dashboard (Settings → API).
     /// Public by design — it grants nothing without a user's JWT + RLS.
     /// Empty string = sync disabled, app runs fully local.
-    static let anonKey = ""
+    static let anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2Z2puYWJkeHNha3RjY2Rmc3ZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4NjU3NDYsImV4cCI6MjEwMjQ0MTc0Nn0.IQmigbpmzYkntoz2RDa-BxitGvF1re0bkNW5vodFkEM"
 
     static var enabled: Bool { !anonKey.isEmpty }
 }
