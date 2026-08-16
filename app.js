@@ -201,6 +201,8 @@ function go(step) {
 function finishOnboarding() {
   setWhyField('committed', true);
   // Day zero of DAYS FREE. Replaying onboarding recommits, so it restarts too.
+  // startStreak also stages the profile for the backend; it is pushed the
+  // moment sign-in creates a session.
   startStreak();
   if (NATIVE) {
     const p = loadProtect();

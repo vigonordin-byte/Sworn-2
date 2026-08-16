@@ -226,6 +226,57 @@ const native = (msg) => window.webkit?.messageHandlers?.sworn?.postMessage(msg);
 let shieldCounts = {};
 
 window.sworn = {
+  onRestore(data) {
+    try {
+      if (!data || typeof data !== 'object') return;
+      const older = (a, b) => (a && b ? Math.min(a, b) : a || b || null);
+      const prof = data.profile || {};
+
+      const p = loadProgress();
+      const serverOath = prof.oath_at ? Date.parse(prof.oath_at) : null;
+      const serverSince = prof.streak_since ? Date.parse(prof.streak_since) : null;
+      const oathAt = older(p.oathAt, serverOath);
+      const since = older(p.since, serverSince);
+      if (oathAt !== p.oathAt || since !== p.since) saveProgress({ since, oathAt });
+
+      const why = loadWhy();
+      let touched = false;
+      if (!why.text && prof.why_text) { why.text = prof.why_text; touched = true; }
+      if (!why.cost && prof.cost) { why.cost = prof.cost; touched = true; }
+      ['reasons', 'goals', 'triggers'].forEach((k) => {
+        if (!why[k].length && Array.isArray(prof[k]) && prof[k].length) { why[k] = prof[k]; touched = true; }
+      });
+      if (touched) saveWhy(why);
+      if (!behaviorChosen() && prof.behavior) saveBehavior(prof.behavior);
+
+      const u = loadUrge();
+      (data.events || []).forEach((e) => {
+        const at = Date.parse(e.at);
+        if (!at) return;
+        if (e.type === 'protection_used' && !u.log.includes(at)) u.log.push(at);
+        else if (e.type === 'temptation_resisted' && !u.resists.includes(at)) u.resists.push(at);
+        else if (e.type === 'commitment_broken' && !u.lapses.some((l) => l.at === at)) u.lapses.push({ at, note: '' });
+      });
+      saveUrge(u);
+
+      // Schedules restore; app selections cannot (Apple's tokens are
+      // device-bound), so restored oaths wait for a re-pick.
+      if (!(loadOaths() || []).length && (data.oaths || []).length) {
+        saveOaths(data.oaths.map((o) => ({
+          id: o.oath_id, name: o.name || 'Protection',
+          time: o.lock_at || '20:00', until: o.unlock_at || '06:00',
+          days: Array.isArray(o.days) ? o.days : [], apps: [], friction: 1,
+          on: o.enabled !== false
+        })));
+        OATHS.length = 0;
+        (loadOaths() || []).forEach((o) => OATHS.push(o));
+        syncShields();
+      }
+
+      S.daysSworn = loadProgress().daysSworn;
+      render();
+    } catch (e) { /* a failed restore must never break the app */ }
+  },
   onAuth(granted) {
     S.screenTimeAuthorized = granted;
     render();
@@ -252,7 +303,7 @@ function syncShields() {
   if (!NATIVE) return;
   native({
     action: 'sync',
-    oaths: OATHS.map((o) => ({ id: o.id, time: o.time, until: o.until, days: o.days, on: o.on }))
+    oaths: OATHS.map((o) => ({ id: o.id, name: o.name, time: o.time, until: o.until, days: o.days, on: o.on, appCount: shieldCount(o) }))
   });
 }
 
@@ -1040,7 +1091,7 @@ const DOCS = {
     <p class="doc-meta">Last updated 15 August 2026</p>
     <p>Sworn is built so that we do not need your data. Almost nothing leaves your phone.</p>
     <h3>Stays on your device</h3>
-    <p>Your reason for stopping, what it has cost you, your oaths, hours, streak, and every note you write after a lapse are stored only on this device. We cannot read them.</p>
+    <p>Your reason for stopping, what it has cost you, your oaths, hours and streak are stored on this device. When you sign in with Apple, your commitment record and the timestamps of protection events sync to our server so a new phone can restore them. Notes you write after a lapse never leave this device.</p>
     <h3>Which apps you block</h3>
     <p>Apps are chosen through Apple's own picker. Apple hands Sworn an opaque token, not a name. Sworn can count how many apps you protect, and genuinely cannot tell which they are.</p>
     <h3>Sign in with Apple</h3>
@@ -1238,6 +1289,7 @@ function endIntervention() {
 
 /** They waited it out and still want the protection gone. */
 function completeBypass() {
+  pushEvent('protection_bypassed');
   const oath = OATHS.find((o) => o.id === S.ivOathId);
   if (oath) oath.on = false;
   clearInterval(timer);
@@ -1263,10 +1315,13 @@ document.getElementById('phone').addEventListener('click', (e) => {
       return render();
     case 'tempted': return tapTempted();
     case 'pause': return startIntervention('voluntary');
-    case 'iv-back': return endIntervention();
+    case 'iv-back':
+      // Walking away from a voluntary intervention is the resist worth
+      // counting. Backing out of a bypass is just cancelling a settings change.
+      if (S.ivMode === 'voluntary') recordResist();
+      return endIntervention();
     case 'iv-continue': return completeBypass();
     case 'cancel':
-    case 'resisted': recordResist(); return endIntervention();
     case 'lapse': S.view = 'lapse'; return render();
     case 'again': {
       const note = document.getElementById('lapsenote');
@@ -1286,6 +1341,7 @@ document.getElementById('phone').addEventListener('click', (e) => {
       const why = loadWhy();
       if (box) why.text = box.value;
       saveWhy(why);
+      pushProfile();
       S.whyEditing = false;
       return render();
     }

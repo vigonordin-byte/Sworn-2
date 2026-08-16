@@ -128,6 +128,31 @@ struct WebView: UIViewRepresentable {
                 case "sync":
                     self.screenTime.sync(oaths: Self.oaths(from: body["oaths"]))
                     self.reportCounts()
+                    if let raw = body["oaths"],
+                       let list = raw as? [[String: Any]] {
+                        SyncEngine.shared.stageOaths(list.map { oath in
+                            [
+                                "oath_id": oath["id"] ?? 0,
+                                "name": oath["name"] ?? "",
+                                "lock_at": oath["time"] ?? "",
+                                "unlock_at": oath["until"] ?? "",
+                                "days": oath["days"] ?? [],
+                                "enabled": oath["on"] ?? true,
+                                "app_count": oath["appCount"] ?? 0
+                            ]
+                        })
+                    }
+
+                case "profile":
+                    if let payload = body["payload"] as? [String: Any] {
+                        SyncEngine.shared.stageProfile(payload)
+                    }
+
+                case "event":
+                    if let type = body["type"] as? String,
+                       let at = body["at"] as? Double {
+                        SyncEngine.shared.recordEvent(type: type, at: at)
+                    }
 
                 case "urge":
                     let minutes = body["minutes"] as? Int ?? 60
@@ -158,6 +183,7 @@ struct WebView: UIViewRepresentable {
                     self.screenTime.resetAll()
                     self.app.replayOnboarding()
                     Shared.wipeAll()
+                    SyncEngine.shared.signOut()
                 #endif
 
                 case "notify":
@@ -211,6 +237,16 @@ struct WebView: UIViewRepresentable {
             guard !didSignalReady else { return }
             didSignalReady = true
             onReady?()
+
+            // Push anything queued, then hand the page whatever the server
+            // holds. The web layer merges conservatively: streak dates only if
+            // older, events unioned, oaths only into an empty list.
+            Task { @MainActor in
+                await SyncEngine.shared.flush()
+                if let json = await SyncEngine.shared.pullAll() {
+                    self.call("window.sworn && window.sworn.onRestore && window.sworn.onRestore(\(json))")
+                }
+            }
         }
 
         // MARK: system sheets

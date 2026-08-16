@@ -171,6 +171,7 @@ function saveProgress(p) {
 function startStreak() {
   const p = loadProgress();
   saveProgress({ since: Date.now(), oathAt: p.oathAt || Date.now() });
+  pushProfile();
 }
 
 // ---------------------------------------------------------------- oaths
@@ -341,18 +342,24 @@ function loadUrge() {
    consequence is honest arithmetic: DAYS FREE restarts, because it must be
    true. The oath, the history and the locks are untouched. */
 function recordLapse(note) {
+  const at = Date.now();
   const urge = loadUrge();
-  urge.lapses.push({ at: Date.now(), note: (note || '').trim() });
+  // The note stays on this device, full stop. Only the moment syncs.
+  urge.lapses.push({ at, note: (note || '').trim() });
   saveUrge(urge);
   const p = loadProgress();
-  saveProgress({ since: Date.now(), oathAt: p.oathAt });
+  saveProgress({ since: at, oathAt: p.oathAt });
+  pushEvent('commitment_broken', at);
+  pushProfile();
 }
 
 /** They reached zero and chose to go back. */
 function recordResist() {
+  const at = Date.now();
   const urge = loadUrge();
-  urge.resists.push(Date.now());
+  urge.resists.push(at);
   saveUrge(urge);
+  pushEvent('temptation_resisted', at);
 }
 
 function saveUrge(urge) {
@@ -371,11 +378,13 @@ function urgeRemaining() {
 
 /** Start the shield and record the save. Returns when it lifts. */
 function beginUrge(minutes) {
+  const at = Date.now();
   const urge = loadUrge();
-  const until = Date.now() + (minutes || URGE_MINUTES) * 60_000;
+  const until = at + (minutes || URGE_MINUTES) * 60_000;
   urge.until = until;
-  urge.log.push(Date.now());
+  urge.log.push(at);
   saveUrge(urge);
+  pushEvent('protection_used', at);
   return until;
 }
 
@@ -383,6 +392,37 @@ function endUrge() {
   const urge = loadUrge();
   urge.until = 0;
   saveUrge(urge);
+}
+
+/* The native host mirrors meaningful moments to the backend. In a browser
+   there is no host and these quietly do nothing — the app is local-first
+   either way, and nothing ever waits on them. */
+function bridge(msg) {
+  try { window.webkit?.messageHandlers?.sworn?.postMessage(msg); } catch (e) { /* no host */ }
+}
+
+/** The persistent profile: behaviour, why record, oath and streak dates. */
+function pushProfile() {
+  const why = loadWhy();
+  const p = loadProgress();
+  bridge({
+    action: 'profile',
+    payload: {
+      behavior: behaviorChosen() ? loadBehavior() : null,
+      name: loadSession().name || null,
+      why_text: why.text || null,
+      reasons: why.reasons,
+      goals: why.goals,
+      triggers: why.triggers,
+      cost: why.cost || null,
+      oath_at: p.oathAt ? new Date(p.oathAt).toISOString() : null,
+      streak_since: p.since ? new Date(p.since).toISOString() : null
+    }
+  });
+}
+
+function pushEvent(type, at) {
+  bridge({ action: 'event', type, at: at || Date.now() });
 }
 
 /* Apple's picker returns opaque tokens, so counts are all the UI may know.

@@ -79,6 +79,13 @@ final class AppleAuth: NSObject, ObservableObject {
             failure = nil
             session = Session(userId: credential.user, name: name, firstRun: !alreadyGreeted)
 
+            // The identity token exists only at this moment — every later
+            // launch runs on the Supabase refresh token instead.
+            if let tokenData = credential.identityToken,
+               let token = String(data: tokenData, encoding: .utf8) {
+                Task { await SyncEngine.shared.signIn(appleIdToken: token) }
+            }
+
         case .failure(let error):
             // Cancelling is not an error worth showing.
             if (error as? ASAuthorizationError)?.code == .canceled { return }
@@ -90,6 +97,7 @@ final class AppleAuth: NSObject, ObservableObject {
         defaults.removeObject(forKey: Key.userId)
         defaults.removeObject(forKey: Key.name)
         session = nil
+        SyncEngine.shared.signOut()
     }
 
     // MARK: helpers
