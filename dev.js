@@ -21,7 +21,9 @@ window.SwornDev = (() => {
 
   const native = (msg) => window.webkit?.messageHandlers?.sworn?.postMessage(msg);
 
-  /** Mock commitment data. Obviously synthetic, but shaped like the real thing. */
+  /** Mock commitment data. Obviously synthetic, but shaped like the real thing.
+      Seeds the RAW record (streak dates, urge log) — analytics derives its
+      numbers from these, exactly as it does for a real user. */
   const seedCommitment = () => {
     saveWhy({
       text: 'I want to become someone who controls my impulses.',
@@ -31,8 +33,18 @@ window.SwornDev = (() => {
       committed: true
     });
     saveSession({ name: 'Vigo', greeted: true });
-    saveProgress({ daysSworn: 11 });
-    saveStats(STATS_SEEDED);
+    const day = 864e5;
+    const now = Date.now();
+    saveProgress({ since: now - 11 * day, oathAt: now - 11 * day });
+    // Eleven days of evening-weighted urges: most resisted, two shields raised
+    // without a countdown, one old lapse note left in place by 'broken'.
+    const evening = (daysAgo, hour) => now - daysAgo * day - (24 - hour) * 3600e3;
+    saveUrge({
+      until: 0,
+      log: [evening(10, 22), evening(8, 21), evening(6, 23), evening(4, 22), evening(2, 21), evening(1, 22)],
+      resists: [evening(9, 22), evening(7, 23), evening(5, 21), evening(3, 22), evening(2, 23), evening(1, 21)],
+      lapses: []
+    });
     saveProtect({ from: '20:00', to: '23:00', days: [0, 1, 2, 3, 4, 5, 6], apps: ['Reddit', 'X', 'Safari'] });
     saveOaths([
       { id: 1, name: 'No Reddit after 20:00', time: '20:00', until: '06:00', days: [0, 1, 2, 3, 4, 5, 6], apps: ['Reddit', 'X', 'Safari'], friction: 1, on: true },
@@ -48,8 +60,6 @@ window.SwornDev = (() => {
       apply() {
         clearWeb();
         clearBehavior();
-        saveProgress({ daysSworn: 0 });
-        saveStats(STATS_EMPTY);
         native({ action: 'devOnboarded', value: false });
         return { go: 'index.html' };
       }
@@ -65,8 +75,7 @@ window.SwornDev = (() => {
           reasons: [7], cost: '', future: '', committed: true
         });
         saveSession({ name: 'Vigo', greeted: true });
-        saveProgress({ daysSworn: 0 });
-        saveStats(STATS_EMPTY);
+        startStreak();
         saveOaths([]);
         native({ action: 'devOnboarded', value: true });
         return { go: 'home.html' };
@@ -101,7 +110,12 @@ window.SwornDev = (() => {
       apply() {
         clearWeb();
         seedCommitment();
-        saveUrge({ until: 0, log: [Date.now() - 864e5, Date.now() - 3600e3], lapses: [{ at: Date.now() - 172800e3, note: 'Late, scrolling in bed.' }] });
+        // A lapse two days ago on top of the seeded record, so recovery,
+        // the restarted streak and the analytics all have history behind them.
+        const u = loadUrge();
+        u.lapses.push({ at: Date.now() - 2 * 864e5, note: 'Late, scrolling in bed.' });
+        saveUrge(u);
+        saveProgress({ since: Date.now() - 2 * 864e5, oathAt: Date.now() - 11 * 864e5 });
         native({ action: 'devOnboarded', value: true });
         return { go: 'home.html', then: 'lapse' };
       }
@@ -114,8 +128,6 @@ window.SwornDev = (() => {
       apply() {
         clearWeb();
         clearBehavior();
-        saveProgress({ daysSworn: 0 });
-        saveStats(STATS_EMPTY);
         native({ action: 'devReset' });
         return { go: 'index.html' };
       }

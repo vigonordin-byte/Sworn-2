@@ -48,17 +48,10 @@ const FRICTION_LEVELS = [
   ['SEALED', 'Blocked with no override until the oath ends.']
 ];
 
-const CHART_DATA = {
-  '7D':  [82, 74, 96, 100, 68, 91, 100],
-  '30D': [61, 74, 58, 80, 92, 71, 86, 64, 78, 95, 70, 88, 74, 100, 83, 66, 92, 79, 100, 72, 90, 84, 68, 97, 88, 76, 100, 93, 85, 100],
-  '90D': [44, 52, 48, 61, 57, 66, 60, 72, 68, 63, 75, 70, 81, 77, 72, 85, 79, 88, 83, 92, 86, 95, 90, 100],
-  'ALL': [22, 31, 28, 40, 37, 49, 44, 58, 52, 64, 60, 71, 67, 78, 74, 83, 79, 88, 85, 92, 89, 96, 92, 100]
-};
+/* How many days back each range reaches; ALL is clamped to the oath date. */
+const RANGE_DAYS = { '7D': 7, '30D': 30, '90D': 90, 'ALL': 3650 };
+const RANGE_AXIS = { '7D': '7 days ago', '30D': '30 days ago', '90D': '90 days ago', 'ALL': 'Day one' };
 
-const HOUR_DATA = [4, 2, 1, 0, 0, 1, 3, 6, 9, 12, 10, 14, 18, 15, 12, 16, 22, 28, 34, 41, 52, 68, 84, 72];
-
-const WEEKDAYS = [['M', 3], ['T', 5], ['W', 4], ['T', 6], ['F', 9], ['S', 11], ['S', 6]];
-const WEEKDAY_MAX = 11;
 
 const NIGHT_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -409,7 +402,11 @@ function whyPage() {
       <div class="why-label">Remember why you are doing this</div>
       <div class="why-quote">“${esc(whyText())}”</div>
       ${picked.length ? `<div class="why-chips">${picked.map((i) => `<span>${esc(reasonLabels()[i])}</span>`).join('')}</div>` : ''}
-      <div class="why-meta">Written the night you took the oath, ${S.daysSworn} days ago.</div>
+      <div class="why-meta">${(() => {
+        const oathAt = loadProgress().oathAt;
+        const days = oathAt ? Math.max(0, Math.floor((Date.now() - oathAt) / 864e5)) : 0;
+        return `Written the night you took the oath, ${days} ${days === 1 ? 'day' : 'days'} ago.`;
+      })()}</div>
       <div class="why-rule"></div>
       <button type="button" class="pill-btn pill-btn--plain" data-act="why-edit">Edit my why</button>`;
 
@@ -610,14 +607,14 @@ function lapseScreen() {
       <div class="lapse__ask">${esc(B().failureLine)}</div>
       <textarea class="why-edit" id="lapsenote" placeholder="Optional. Only you ever see this."></textarea>
       <button type="button" class="cta-gold" style="margin-top:auto" data-act="again">START AGAIN</button>
-      <div class="lapse__foot">Nothing is taken away. Your commitment still stands.</div>
+      <div class="lapse__foot">Your day counter starts again. Your oath, your history and your locks all stay.</div>
     </div>`;
 }
 
 // ---------------------------------------------------------------- analytics
 
 function analyticsTab() {
-  const STATS = loadStats();
+  const STATS = analyticsStats();
 
   if (!STATS.hasData) {
     return `
@@ -630,7 +627,7 @@ function analyticsTab() {
       </div>`;
   }
 
-  const bars = CHART_DATA[S.range];
+  const bars = dailyKept(RANGE_DAYS[S.range]);
   const gap = bars.length > 40 ? 1 : bars.length > 12 ? 2 : 6;
 
   const chart = bars.map((v) => {
@@ -638,12 +635,12 @@ function analyticsTab() {
     return `<div style="height:${Math.max(6, v)}%;background:${bg}"></div>`;
   }).join('');
 
-  const hours = HOUR_DATA.map((v) => {
+  const hours = urgeByHour().map((v) => {
     const bg = v > 45 ? '#e7bc6a' : v > 20 ? 'rgba(231,188,106,.42)' : 'rgba(255,255,255,.16)';
     return `<div style="height:${Math.max(4, v)}%;background:${bg}"></div>`;
   }).join('');
 
-  const resistedPct = Math.round((STATS.resisted / STATS.attempts) * 100);
+  const resistedPct = STATS.attempts ? Math.round((STATS.resisted / STATS.attempts) * 100) : 0;
 
   return `
     <div class="an-head">
@@ -665,14 +662,14 @@ function analyticsTab() {
             <span class="an-card__label" style="display:block">Commitment rate</span>
             <span style="display:flex;margin-top:7px;align-items:baseline;gap:9px">
               <span class="an-card__big">${STATS.rate}<small>%</small></span>
-              <span style="font-size:12px;font-weight:600;color:var(--green-tx)">+${STATS.rateDelta}</span>
+              ${STATS.rateDelta === null ? '' : `<span style="font-size:12px;font-weight:600;color:${STATS.rateDelta >= 0 ? 'var(--green-tx)' : '#e88178'}">${STATS.rateDelta >= 0 ? '+' : ''}${STATS.rateDelta}</span>`}
             </span>
           </span>
           <span class="an-card__arrow">›</span>
         </span>
         <span class="chart" style="margin-top:16px;gap:${gap}px">${chart}</span>
         ${S.card === 1 ? `
-        <span class="axis" style="margin-top:8px"><span>30 days ago</span><span>Today</span></span>
+        <span class="axis" style="margin-top:8px"><span>${RANGE_AXIS[S.range]}</span><span>Today</span></span>
         <span class="an-card__more" style="display:block">${esc(STATS.rateNote)}</span>` : ''}
       </button>
 
@@ -690,15 +687,21 @@ function analyticsTab() {
         <span class="an-card__more" style="display:block">${esc(STATS.hardestNote)}</span>
         <span style="display:block;margin-top:16px;font-size:12px;color:rgba(235,235,245,.45)">By day</span>
         <span class="wk">
-          ${WEEKDAYS.map(([label, n]) => {
-            const bg = n >= 9 ? '#e7bc6a' : n >= 5 ? 'rgba(231,188,106,.4)' : 'rgba(255,255,255,.16)';
-            const fg = n >= 9 ? 'rgba(235,235,245,.7)' : 'rgba(235,235,245,.35)';
-            return `
+          ${(() => {
+            const counts = urgeByWeekday();
+            const max = Math.max(...counts, 1);
+            return ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((label, i) => {
+              const n = counts[i];
+              const heavy = n >= max * 0.8 && n > 0;
+              const bg = heavy ? '#e7bc6a' : n > 0 ? 'rgba(231,188,106,.4)' : 'rgba(255,255,255,.16)';
+              const fg = heavy ? 'rgba(235,235,245,.7)' : 'rgba(235,235,245,.35)';
+              return `
             <span class="wk__col">
-              <span class="wk__slot"><i style="height:${Math.round((n / WEEKDAY_MAX) * 100)}%;background:${bg}"></i></span>
+              <span class="wk__slot"><i style="height:${Math.max(6, Math.round((n / max) * 100))}%;background:${bg}"></i></span>
               <span class="wk__label" style="color:${fg}">${label}</span>
             </span>`;
-          }).join('')}
+            }).join('');
+          })()}
         </span>` : ''}
       </button>
 
@@ -1263,11 +1266,13 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'iv-back': return endIntervention();
     case 'iv-continue': return completeBypass();
     case 'cancel':
-    case 'resisted': return endIntervention();
+    case 'resisted': recordResist(); return endIntervention();
     case 'lapse': S.view = 'lapse'; return render();
     case 'again': {
       const note = document.getElementById('lapsenote');
       recordLapse(note ? note.value : '');
+      // The lapse restarted the streak; the seal must show it right away.
+      S.daysSworn = loadProgress().daysSworn;
       return endIntervention();
     }
     case 'achievements-open': S.achievementsOpen = true; return render();

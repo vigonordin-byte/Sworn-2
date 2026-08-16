@@ -140,58 +140,37 @@ function greeting() {
 
 const PROGRESS_KEY = 'sworn.progress';
 
+/* The streak is computed from a start date, never stored as a number — a
+   stored count can only rot. `since` restarts on every lapse; `oathAt` is the
+   night they first swore and never moves, so "written N days ago" stays true
+   across restarts. Old builds stored a bare count; it migrates to a date. */
 function loadProgress() {
+  let p = null;
   try {
     const raw = localStorage.getItem(PROGRESS_KEY);
-    if (raw) {
-      const p = JSON.parse(raw);
-      if (p && typeof p.daysSworn === 'number') return { daysSworn: p.daysSworn };
-    }
+    if (raw) p = JSON.parse(raw);
   } catch (e) {
     // storage blocked
   }
-  return { daysSworn: 11 };
+  if (!p || typeof p !== 'object') p = {};
+  if (typeof p.daysSworn === 'number' && typeof p.since !== 'number') {
+    p.since = Date.now() - p.daysSworn * 864e5;
+  }
+  const since = typeof p.since === 'number' ? p.since : null;
+  const oathAt = typeof p.oathAt === 'number' ? p.oathAt : since;
+  const daysSworn = since ? Math.max(0, Math.floor((Date.now() - since) / 864e5)) : 0;
+  return { since, oathAt, daysSworn };
 }
 
 function saveProgress(p) {
-  try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(p)); } catch (e) { /* blocked */ }
+  const record = { since: p.since ?? null, oathAt: p.oathAt ?? p.since ?? null };
+  try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(record)); } catch (e) { /* blocked */ }
 }
 
-const STATS_KEY = 'sworn.stats';
-
-/** The figures behind the design. `hasData` false means show the empty state. */
-const STATS_SEEDED = {
-  hasData: true,
-  rate: 92, rateDelta: 14,
-  rateNote: 'You kept your limits on 47 of 51 protected occasions, 14 points better than the previous 30 days.',
-  hardest: '22:00 – 01:00',
-  hardestNote: 'That window holds 61% of your 44 interventions and lapses.',
-  resisted: 38, attempts: 44,
-  resistedNote: 'Five of the six lapses happened after 23:00, on nights with no lock set.'
-};
-
-const STATS_EMPTY = {
-  hasData: false,
-  rate: 0, rateDelta: 0, rateNote: '',
-  hardest: '–', hardestNote: '',
-  resisted: 0, attempts: 0, resistedNote: ''
-};
-
-function loadStats() {
-  try {
-    const raw = localStorage.getItem(STATS_KEY);
-    if (raw) {
-      const s = JSON.parse(raw);
-      if (s && typeof s === 'object') return { ...STATS_SEEDED, ...s };
-    }
-  } catch (e) {
-    // storage blocked
-  }
-  return STATS_SEEDED;
-}
-
-function saveStats(s) {
-  try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch (e) { /* blocked */ }
+/** The commitment moment. Starts (or restarts) the streak; keeps the oath date. */
+function startStreak() {
+  const p = loadProgress();
+  saveProgress({ since: Date.now(), oathAt: p.oathAt || Date.now() });
 }
 
 // ---------------------------------------------------------------- oaths
@@ -346,6 +325,7 @@ function loadUrge() {
         return {
           until: u.until || 0,
           log: Array.isArray(u.log) ? u.log : [],
+          resists: Array.isArray(u.resists) ? u.resists : [],
           lapses: Array.isArray(u.lapses) ? u.lapses : []
         };
       }
@@ -353,14 +333,25 @@ function loadUrge() {
   } catch (e) {
     // storage blocked
   }
-  return { until: 0, log: [], lapses: [] };
+  return { until: 0, log: [], resists: [], lapses: [] };
 }
 
 /* A lapse is recorded, never scored. It exists so the user can say what
-   happened and start again — not so the app can hold it against them. */
+   happened and start again — not so the app can hold it against them. The one
+   consequence is honest arithmetic: DAYS FREE restarts, because it must be
+   true. The oath, the history and the locks are untouched. */
 function recordLapse(note) {
   const urge = loadUrge();
   urge.lapses.push({ at: Date.now(), note: (note || '').trim() });
+  saveUrge(urge);
+  const p = loadProgress();
+  saveProgress({ since: Date.now(), oathAt: p.oathAt });
+}
+
+/** They reached zero and chose to go back. */
+function recordResist() {
+  const urge = loadUrge();
+  urge.resists.push(Date.now());
   saveUrge(urge);
 }
 
@@ -461,4 +452,111 @@ function toggleWhyReason(i) {
   const at = why.reasons.indexOf(i);
   if (at === -1) why.reasons.push(i); else why.reasons.splice(at, 1);
   saveWhy(why);
+}
+
+// ---------------------------------------------------------------- analytics
+
+/* Everything the analytics page shows is computed here from the raw record:
+   the streak dates and the urge log. Nothing is stored twice, so the numbers
+   cannot drift from the events behind them. */
+
+/** One value per day, oldest first: 100 if no lapse that day, 0 otherwise.
+    Clamped to the days since the oath was first sworn. */
+function dailyKept(nDays) {
+  const p = loadProgress();
+  if (!p.oathAt) return [];
+  const u = loadUrge();
+  const dayMs = 864e5;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const daysSinceOath = Math.floor((Date.now() - p.oathAt) / dayMs) + 1;
+  const total = Math.max(1, Math.min(nDays, daysSinceOath));
+  const out = [];
+  for (let i = total - 1; i >= 0; i--) {
+    const d0 = today.getTime() - i * dayMs;
+    const lapsed = u.lapses.some((l) => l.at >= d0 && l.at < d0 + dayMs);
+    out.push(lapsed ? 0 : 100);
+  }
+  return out;
+}
+
+/** Every recorded urge moment: shields raised, resists, lapses. */
+function urgeEvents() {
+  const u = loadUrge();
+  return [...u.log, ...u.resists, ...u.lapses.map((l) => l.at)];
+}
+
+/** 24 values, midnight first, scaled so the busiest hour is 100. */
+function urgeByHour() {
+  const counts = new Array(24).fill(0);
+  urgeEvents().forEach((t) => { counts[new Date(t).getHours()] += 1; });
+  const max = Math.max(...counts, 1);
+  return counts.map((c) => Math.round((c / max) * 100));
+}
+
+/** Events per weekday, Monday first. */
+function urgeByWeekday() {
+  const counts = new Array(7).fill(0);
+  urgeEvents().forEach((t) => { counts[(new Date(t).getDay() + 6) % 7] += 1; });
+  return counts;
+}
+
+/** The 3-hour window holding the most urges. Needs a handful to mean anything. */
+function hardestWindow() {
+  const counts = new Array(24).fill(0);
+  const events = urgeEvents();
+  events.forEach((t) => { counts[new Date(t).getHours()] += 1; });
+  if (events.length < 5) return { label: '–', share: 0, count: events.length };
+  let bestStart = 0;
+  let bestSum = -1;
+  for (let h = 0; h < 24; h++) {
+    const sum = counts[h] + counts[(h + 1) % 24] + counts[(h + 2) % 24];
+    if (sum > bestSum) { bestSum = sum; bestStart = h; }
+  }
+  const pad = (h) => String(h).padStart(2, '0') + ':00';
+  return {
+    label: pad(bestStart) + ' – ' + pad((bestStart + 3) % 24),
+    share: Math.round((bestSum / events.length) * 100),
+    count: events.length
+  };
+}
+
+function analyticsStats() {
+  const p = loadProgress();
+  if (!p.since) return { hasData: false };
+  const u = loadUrge();
+
+  const kept30 = dailyKept(30);
+  const keptDays = kept30.filter((v) => v === 100).length;
+  const rate = kept30.length ? Math.round((keptDays / kept30.length) * 100) : 100;
+
+  // Only comparable once there is an earlier window to compare against.
+  const kept60 = dailyKept(60);
+  const prev = kept60.slice(0, Math.max(0, kept60.length - kept30.length));
+  const rateDelta = prev.length >= 7
+    ? rate - Math.round((prev.filter((v) => v === 100).length / prev.length) * 100)
+    : null;
+  const rateNote = 'You kept your commitment on ' + keptDays + ' of the last ' +
+    kept30.length + (kept30.length === 1 ? ' day.' : ' days.');
+
+  const hw = hardestWindow();
+  const hardestNote = hw.label === '–'
+    ? 'Not enough recorded urges yet to show a pattern.'
+    : 'That window holds ' + hw.share + '% of your ' + hw.count + ' recorded urges.';
+
+  const resisted = u.resists.length;
+  const attempts = u.resists.length + u.lapses.length;
+  const resistedNote = u.lapses.length === 0
+    ? (attempts
+        ? 'Every recorded urge so far ended with you walking away.'
+        : 'No urges recorded yet. The button is there when you need it.')
+    : u.lapses.length + (u.lapses.length === 1 ? ' lapse' : ' lapses') +
+      ' recorded. Each one restarted the day counter, nothing else.';
+
+  return {
+    hasData: true,
+    rate, rateDelta, rateNote,
+    hardest: hw.label, hardestNote,
+    resisted, attempts, resistedNote
+  };
 }

@@ -200,6 +200,8 @@ function go(step) {
    browser there is no native host, so just walk to the main page. */
 function finishOnboarding() {
   setWhyField('committed', true);
+  // Day zero of DAYS FREE. Replaying onboarding recommits, so it restarts too.
+  startStreak();
   if (NATIVE) {
     const p = loadProtect();
     native({ action: 'sync', oaths: [{ id: ONBOARDING_OATH_ID, time: p.from, until: p.to, days: p.days, on: true }] });
