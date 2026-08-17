@@ -153,8 +153,17 @@ function loadProgress() {
     // storage blocked
   }
   if (!p || typeof p !== 'object') p = {};
+
+  /* Records written by an older build stored a bare count. Deriving a start
+     date from it must happen once and be written back: recomputing it on
+     every read pushed the start forward each time, which froze the counter —
+     it would have read 1 forever, never reaching day 2. */
+  let migrated = false;
   if (typeof p.daysSworn === 'number' && typeof p.since !== 'number') {
-    p.since = Date.now() - p.daysSworn * 864e5;
+    const day = new Date();
+    day.setHours(0, 0, 0, 0);
+    p.since = day.getTime() - Math.max(0, p.daysSworn - 1) * 864e5;
+    migrated = true;
   }
   const since = typeof p.since === 'number' ? p.since : null;
   const oathAt = typeof p.oathAt === 'number' ? p.oathAt : since;
@@ -167,6 +176,7 @@ function loadProgress() {
   const daysSworn = since ? Math.max(1, elapsed + 1) : 0;
   // The longest run ever, which a lapse must not erase — achievements keep it.
   const best = Math.max(typeof p.best === 'number' ? p.best : 0, daysSworn);
+  if (migrated) saveProgress({ since, oathAt, best });
   return { since, oathAt, best, daysSworn };
 }
 
