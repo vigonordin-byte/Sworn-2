@@ -26,7 +26,13 @@ const TIER_COPY = [
    to three sample commitments from the design import, so a brand-new user met
    "No Reddit after 20:00" and two others they never created. */
 let OATHS = loadOaths() || [];
-let nextOathId = OATHS.reduce((n, o) => Math.max(n, o.id), 0) + 1;
+/* Derived at the moment it is needed, never cached. A stored counter went
+   stale the instant anything replaced the list — a dev preset, a restore from
+   the server — and the next draft then reserved an id that already existed,
+   so editing one commitment opened another. */
+function nextFreeId() {
+  return OATHS.reduce((n, o) => Math.max(n, o.id), 0) + 1;
+}
 
 /** Every mutation goes through here so storage and the device stay in step. */
 function persistOaths() {
@@ -1178,7 +1184,7 @@ const countLabel = (n) => n + (n === 1 ? ' app' : ' apps');
    without apps is refused. A draft that is cancelled leaves a selection with
    no commitment behind it, which the next sync forgets. */
 function blankOath() {
-  return { id: nextOathId, isNew: true, name: '', time: '20:00', until: '06:00',
+  return { id: nextFreeId(), isNew: true, name: '', time: '20:00', until: '06:00',
            days: [0, 1, 2, 3, 4, 5, 6], apps: [], on: true };
 }
 
@@ -1192,6 +1198,14 @@ function oathSheet() {
   const picked = NATIVE ? shieldCount(d) : d.apps.length;
   const ready = d.name.trim().length > 0 && picked > 0;
   const sec = S.sheetSection;
+
+  /* The time is the row. Tapping it opens the system wheel directly, so
+     there is no expanding sub-row repeating the value underneath. */
+  const timeRow = (label, field, value) => `
+    <label class="tile tile--row" style="margin-top:11px">
+      <span style="font-weight:600">${label}</span>
+      <input type="time" class="tile-time" data-field="${field}" value="${esc(value)}">
+    </label>`;
 
   const row = (label, value, section, icon) => `
     <button type="button" class="tile tile--row${on(sec === section)}" style="margin-top:11px" data-act="section" data-section="${section}" aria-expanded="${sec === section}">
@@ -1211,15 +1225,8 @@ function oathSheet() {
       <input class="sheet-input" style="margin-top:22px" id="oathname" data-field="name"
         value="${esc(d.name)}" placeholder="Name your commitment" autocomplete="off">
 
-      ${row('Locks at', d.time, 'time')}
-      <div class="tile tile--sub" data-sub="time"${sec === 'time' ? '' : ' hidden'}>
-        <input type="time" class="time-input" data-field="time" value="${esc(d.time)}">
-      </div>
-
-      ${row('Unlocks at', d.until, 'until')}
-      <div class="tile tile--sub" data-sub="until"${sec === 'until' ? '' : ' hidden'}>
-        <input type="time" class="time-input" data-field="until" value="${esc(d.until)}">
-      </div>
+      ${timeRow('Locks at', 'time', d.time)}
+      ${timeRow('Unlocks at', 'until', d.until)}
 
       <div class="tile" style="margin-top:11px;padding:18px">
         <div style="font-size:13px;color:rgba(242,240,236,.55)">On these nights <span style="color:rgba(242,240,236,.35)">· ${esc(scheduleLabel(d.days))}</span></div>
@@ -1790,7 +1797,8 @@ document.getElementById('phone').addEventListener('click', (e) => {
       const wasNew = d.isNew === true;
       delete d.isNew;
       if (wasNew) {
-        nextOathId = Math.max(nextOathId, d.id) + 1;
+        // Guard against the list having changed while the sheet was open.
+        if (OATHS.some((o) => o.id === d.id)) d.id = nextFreeId();
         OATHS.push(d);
       } else {
         OATHS = OATHS.map((o) => (o.id === d.id ? d : o));
@@ -1835,12 +1843,6 @@ document.getElementById('phone').addEventListener('click', (e) => {
         row.classList.toggle('is-on', open);
         row.setAttribute('aria-expanded', open);
       });
-      if (S.sheetSection === 'time' || S.sheetSection === 'until') {
-        const input = document.querySelector(`[data-sub="${S.sheetSection}"] input`);
-        // showPicker opens the wheel directly; focus is the fallback where it
-        // is unavailable, and neither is worth an error if the tap was quick.
-        if (input) { try { input.showPicker(); } catch (e) { input.focus(); } }
-      }
       return;
     }
     case 'day': toggle(S.draft.days, i); return render();
@@ -1925,10 +1927,9 @@ document.getElementById('phone').addEventListener('input', (e) => {
   }
 
   if (field === 'time' || field === 'until') {
+    // The input is the label, so there is nothing else to keep in step.
     S.draft[field] = e.target.value;
     S.sheetError = null;
-    const label = document.querySelector(`[data-section="${field}"] .tile__val`);
-    if (label) label.textContent = e.target.value;
   }
 });
 

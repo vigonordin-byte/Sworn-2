@@ -1736,3 +1736,20 @@ body { font-family: var(--sf); }
   line-height: 1.45;
   color: rgba(242, 240, 236, .38);
 }
+
+/* The time value is the control: tapping it opens the system wheel, so no
+   expanding row underneath is needed to change it. */
+.tile-time {
+  border: 0;
+  padding: 0;
+  background: none;
+  font-family: var(--sf);
+  font-size: 14.5px;
+  color: rgba(242, 240, 236, .55);
+  color-scheme: dark;
+  text-align: right;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+label.tile { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
