@@ -56,6 +56,7 @@ const PROTECTION = { until: 'Until 8:00 AM', left: '8h 42m', progress: 38 };
 
 const S = {
   tab: 'home',
+  anCard: null,        // open analytics detail page: null | 1 | 2 | 3
   daysSworn: loadProgress().daysSworn,
   interventionSeconds: 60,
   view: 'home',        // home | protected | running | lapse
@@ -66,7 +67,6 @@ const S = {
   range: '30D',
   draft: null,         // the oath being created/edited, or null
   sheetSection: null,  // expanded sheet row: null | 'time' | 'apps' | 'friction'
-  card: null,          // open analytics card: null | 1 | 2 | 3
   whyOpen: false,
   whyEditing: false,
   achievementsOpen: false,
@@ -200,7 +200,7 @@ function clock12(t) {
 // ---------------------------------------------------------------- backdrop
 
 function backdrop() {
-  if (S.achievementsOpen || S.whyOpen) return '<div class="bd-base"></div>';
+  if (S.achievementsOpen || S.whyOpen || S.anCard) return '<div class="bd-base"></div>';
   if (S.tab !== 'home') return '<div class="bd-flat"></div>';
   return `
     <div class="bd-base"></div>
@@ -843,6 +843,21 @@ function analyticsTab() {
 
   const resistedPct = STATS.attempts ? Math.round((STATS.resisted / STATS.attempts) * 100) : 0;
 
+  const card = (n, label, value, extra, body) => `
+      <button type="button" class="card an-card" data-act="an-open" data-card="${n}">
+        <span style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <span style="display:block">
+            <span class="an-card__label" style="display:block">${label}</span>
+            <span style="display:flex;margin-top:7px;align-items:baseline;gap:9px">
+              <span class="an-card__big">${value}</span>
+              ${extra || ''}
+            </span>
+          </span>
+          <span class="an-card__arrow">›</span>
+        </span>
+        ${body}
+      </button>`;
+
   return `
     <div class="an-head">
       <div class="an-head__title">YOUR LAST 30 DAYS</div>
@@ -858,37 +873,77 @@ function analyticsTab() {
     <div class="scroll" style="top:calc(106px + var(--safe-top));bottom:var(--nav-h);padding:22px 20px 24px">
       <div class="scroll__breathe">
 
-      <button type="button" class="card an-card${on(S.card === 1)}" data-act="card" data-card="1" aria-expanded="${S.card === 1}">
-        <span style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-          <span style="display:block">
-            <span class="an-card__label" style="display:block">Commitment rate</span>
-            <span style="display:flex;margin-top:7px;align-items:baseline;gap:9px">
-              <span class="an-card__big">${STATS.rate}<small>%</small></span>
-              ${STATS.rateDelta === null ? '' : `<span style="font-size:12px;font-weight:600;color:${STATS.rateDelta >= 0 ? 'var(--green-tx)' : '#e88178'}">${STATS.rateDelta >= 0 ? '+' : ''}${STATS.rateDelta}</span>`}
-            </span>
-          </span>
-          <span class="an-card__arrow">›</span>
-        </span>
-        <span class="daystrip" style="margin-top:16px;gap:${gap}px">${chart}</span>
-        ${S.card === 1 ? `
-        <span class="axis" style="margin-top:8px"><span>${bars.length >= RANGE_DAYS[S.range] ? RANGE_AXIS[S.range] : 'Day one'}</span><span>Today</span></span>
-        <span class="an-card__more" style="display:block">${esc(STATS.rateNote)}</span>` : ''}
-      </button>
+      ${card(1, 'Commitment rate', `${STATS.rate}<small>%</small>`,
+        STATS.rateDelta === null ? '' : `<span style="font-size:12px;font-weight:600;color:${STATS.rateDelta >= 0 ? 'var(--green-tx)' : '#e88178'}">${STATS.rateDelta >= 0 ? '+' : ''}${STATS.rateDelta}</span>`,
+        `<span class="daystrip" style="margin-top:16px;gap:${gap}px">${chart}</span>`)}
 
-      <button type="button" class="card an-card${on(S.card === 2)}" style="margin-top:16px" data-act="card" data-card="2" aria-expanded="${S.card === 2}">
-        <span style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-          <span style="display:block">
-            <span class="an-card__label" style="display:block">Hardest times</span>
-            <span class="an-card__mid" style="display:block;margin-top:7px">${esc(STATS.hardest)}</span>
-          </span>
-          <span class="an-card__arrow">›</span>
-        </span>
-        <span class="hours" style="margin-top:16px">${hours}</span>
-        <span class="axis"><span>6A</span><span>12P</span><span>6P</span><span>12A</span></span>
-        ${S.card === 2 ? `
-        <span class="an-card__more" style="display:block">${esc(STATS.hardestNote)}</span>
-        <span style="display:block;margin-top:16px;font-size:12px;color:rgba(235,235,245,.45)">By day</span>
-        <span class="wk">
+      <div style="height:16px"></div>
+      ${card(2, 'Hardest times', esc(STATS.hardest), '',
+        `<span class="hours" style="margin-top:16px">${hours}</span>
+         <span class="axis"><span>6A</span><span>12P</span><span>6P</span><span>12A</span></span>`)}
+
+      <div style="height:16px"></div>
+      ${card(3, esc(B().resistedLabel), STATS.resisted,
+        `<span style="font-size:13px;color:rgba(235,235,245,.45)">of ${STATS.attempts}</span>`,
+        `<span class="split">
+           <span style="width:${resistedPct}%;background:#fff"></span>
+           <span style="width:${100 - resistedPct}%;background:rgba(255,255,255,.18)"></span>
+         </span>`)}
+
+      </div>
+    </div>`;
+}
+
+/* Each measure gets its own screen rather than expanding in place, so the
+   detail has room to explain itself. Same page furniture as My why and
+   Achievements. */
+function analyticsPage() {
+  if (!S.anCard) return '';
+  const STATS = analyticsStats();
+  if (!STATS.hasData) return '';
+
+  const bars = dailyKept(RANGE_DAYS[S.range]);
+  const gap = bars.length > 40 ? 1 : bars.length > 12 ? 2 : 4;
+  const strip = bars.map((v, i) => `<div class="dc${v === 100 ? '' : ' dc--broke'}${i === bars.length - 1 ? ' dc--today' : ''}"></div>`).join('');
+  const kept = bars.filter((v) => v === 100).length;
+
+  const stat = (big, small) => `
+    <div class="an-stat">
+      <div class="an-stat__big">${big}</div>
+      <div class="an-stat__small">${small}</div>
+    </div>`;
+
+  const pages = {
+    1: ['COMMITMENT RATE', `
+      ${stat(`${STATS.rate}<small>%</small>`, STATS.rateDelta === null
+        ? 'Not enough history yet to compare against an earlier stretch.'
+        : `${STATS.rateDelta >= 0 ? 'Up' : 'Down'} ${Math.abs(STATS.rateDelta)} points on the previous stretch.`)}
+      <div class="an-block">
+        <div class="an-block__label">EVERY DAY IN THIS RANGE</div>
+        <div class="daystrip" style="margin-top:14px;gap:${gap}px">${strip}</div>
+        <div class="axis" style="margin-top:10px"><span>${bars.length >= RANGE_DAYS[S.range] ? RANGE_AXIS[S.range] : 'Day one'}</span><span>Today</span></div>
+        <div class="an-legend">
+          <span><i style="background:rgba(242,240,236,.22)"></i>Kept</span>
+          <span><i style="background:#d6544a"></i>Broken</span>
+          <span><i style="background:#e7bc6a"></i>Today</span>
+        </div>
+      </div>
+      <div class="an-note">${esc(STATS.rateNote)}</div>
+      <div class="an-note an-note--dim">Kept ${kept} of ${bars.length}. A day counts as kept unless you recorded a lapse in it.</div>`],
+
+    2: ['HARDEST TIMES', `
+      ${stat(esc(STATS.hardest), 'The three hours that hold the most urges.')}
+      <div class="an-block">
+        <div class="an-block__label">BY HOUR</div>
+        <div class="hours" style="margin-top:14px">${urgeByHour().map((v) => {
+          const bg = v > 45 ? '#e7bc6a' : v > 20 ? 'rgba(231,188,106,.42)' : 'rgba(255,255,255,.16)';
+          return `<div style="height:${Math.max(4, v)}%;background:${bg}"></div>`;
+        }).join('')}</div>
+        <div class="axis" style="margin-top:10px"><span>6A</span><span>12P</span><span>6P</span><span>12A</span></div>
+      </div>
+      <div class="an-block">
+        <div class="an-block__label">BY DAY</div>
+        <div class="wk" style="margin-top:14px">
           ${(() => {
             const counts = urgeByWeekday();
             const max = Math.max(...counts, 1);
@@ -896,45 +951,52 @@ function analyticsTab() {
               const n = counts[i];
               const heavy = n >= max * 0.8 && n > 0;
               const bg = heavy ? '#e7bc6a' : n > 0 ? 'rgba(231,188,106,.4)' : 'rgba(255,255,255,.16)';
-              const fg = heavy ? 'rgba(235,235,245,.7)' : 'rgba(235,235,245,.35)';
               return `
-            <span class="wk__col">
-              <span class="wk__slot"><i style="height:${Math.max(6, Math.round((n / max) * 100))}%;background:${bg}"></i></span>
-              <span class="wk__label" style="color:${fg}">${label}</span>
-            </span>`;
+              <span class="wk__col">
+                <span class="wk__slot"><i style="height:${Math.max(6, Math.round((n / max) * 100))}%;background:${bg}"></i></span>
+                <span class="wk__label">${label}</span>
+              </span>`;
             }).join('');
           })()}
-        </span>` : ''}
-      </button>
+        </div>
+      </div>
+      <div class="an-note">${esc(STATS.hardestNote)}</div>
+      <div class="an-note an-note--dim">Worth pointing a commitment at. Protection during your hardest window is the single change that does the most.</div>`],
 
-      <button type="button" class="card an-card${on(S.card === 3)}" style="margin-top:16px" data-act="card" data-card="3" aria-expanded="${S.card === 3}">
-        <span style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-          <span style="display:block">
-            <span class="an-card__label" style="display:block">${esc(B().resistedLabel)}</span>
-            <span style="display:flex;margin-top:7px;align-items:baseline;gap:9px">
-              <span class="an-card__big">${STATS.resisted}</span>
-              <span style="font-size:13px;color:rgba(235,235,245,.45)">of ${STATS.attempts}</span>
-            </span>
-          </span>
-          <span class="an-card__arrow">›</span>
-        </span>
-        <span class="split">
-          <span style="width:${resistedPct}%;background:#fff"></span>
-          <span style="width:${100 - resistedPct}%;background:rgba(255,255,255,.18)"></span>
-        </span>
-        ${S.card === 3 ? `
-        <span class="legend-row">
-          <div><i style="background:#fff"></i>Resisted ${STATS.resisted}</div>
-          <div><i style="background:rgba(255,255,255,.28)"></i>Continued ${STATS.attempts - STATS.resisted}</div>
-        </span>
-        <span class="an-card__more" style="display:block;border-top:0;padding-top:0;margin-top:14px">${esc(STATS.resistedNote)}</span>
-        <span class="saves">
-          <span class="saves__n">${urgeSaves()}</span>
-          <span class="saves__t">Temptation → protection activated</span>
-          <span class="saves__d">Times you noticed an urge and asked Sworn for cover. Each one is a save, not a slip.</span>
-        </span>` : ''}
-      </button>
+    3: [B().resistedLabel.toUpperCase(), `
+      ${stat(`${STATS.resisted}<small> of ${STATS.attempts}</small>`, 'Moments you met an urge and walked away.')}
+      <div class="an-block">
+        <div class="split" style="margin-top:0">
+          <span style="width:${STATS.attempts ? Math.round((STATS.resisted / STATS.attempts) * 100) : 0}%;background:#fff"></span>
+          <span style="width:${STATS.attempts ? 100 - Math.round((STATS.resisted / STATS.attempts) * 100) : 100}%;background:rgba(255,255,255,.18)"></span>
+        </div>
+        <div class="an-legend">
+          <span><i style="background:#fff"></i>Resisted ${STATS.resisted}</span>
+          <span><i style="background:rgba(255,255,255,.28)"></i>Gave in ${STATS.attempts - STATS.resisted}</span>
+        </div>
+      </div>
+      <div class="an-block">
+        <div class="an-block__label">PROTECTION ASKED FOR</div>
+        <div class="an-stat__big" style="margin-top:10px">${urgeSaves()}</div>
+        <div class="an-note an-note--dim" style="margin-top:6px">Times you noticed an urge and asked Sworn for cover. Each one is a save, not a slip.</div>
+      </div>
+      <div class="an-note">${esc(STATS.resistedNote)}</div>`]
+  };
 
+  const [title, body] = pages[S.anCard] || pages[1];
+
+  return `
+    <div class="page">
+      <div class="bd-flat"></div>
+      <div class="page__head">
+        <button type="button" class="icon-btn" style="width:34px;height:34px" data-act="an-close" aria-label="Back">
+          ${svg(CHEVRON, 22, '#fff', 1.9)}
+        </button>
+        <div class="page__title">${esc(title)}</div>
+      </div>
+      <div class="page__body">
+        ${body}
+        <div style="height:30px"></div>
       </div>
     </div>`;
 }
@@ -1381,7 +1443,7 @@ function render() {
   document.getElementById('layer').innerHTML =
     (S.tab === 'home' ? intervention() : '') +
     oathSheet() +
-    achievements() + whyPage() + devPage() + settingsPage();
+    achievements() + whyPage() + analyticsPage() + devPage() + settingsPage();
   if (S.tab === 'home' && S.view === 'running') armReveal();
 }
 
@@ -1532,11 +1594,8 @@ document.getElementById('phone').addEventListener('click', (e) => {
       return render();
     }
     case 'range': S.range = el.dataset.range; return render();
-    case 'card': {
-      const n = Number(el.dataset.card);
-      S.card = S.card === n ? null : n;
-      return render();
-    }
+    case 'an-open': S.anCard = Number(el.dataset.card); return render();
+    case 'an-close': S.anCard = null; return render();
     case 'oath-toggle': {
       const o = OATHS.find((x) => x.id === Number(el.dataset.id));
       if (!o) return;
