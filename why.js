@@ -270,43 +270,6 @@ function seedFirstOath(p) {
   saveOaths([oath, ...rest]);
 }
 
-/** Everything Sworn holds, as plain text, for Export my record. */
-function exportRecord() {
-  const why = loadWhy();
-  const urge = loadUrge();
-  const oaths = loadOaths() || [];
-  const lines = [
-    'SWORN, my record',
-    'Stopping: ' + B().choice,
-    new Date().toLocaleString(),
-    '',
-    'WHY',
-    why.text || '(not written)',
-    '',
-    'WHAT IT COST',
-    why.cost || '(not written)',
-    '',
-    'NINETY DAYS FROM NOW',
-    why.future || '(not written)',
-    '',
-    'REASONS',
-    ...(why.reasons.length ? why.reasons.map((i) => '- ' + reasonLabels()[i]) : ['(none picked)']),
-    '',
-    'DAYS KEPT',
-    String(loadProgress().daysSworn),
-    '',
-    'COMMITMENTS',
-    ...(oaths.length ? oaths.map((o) => `- ${o.name} · ${o.time}-${o.until} · ${o.on ? 'on' : 'off'}`) : ['(none)']),
-    '',
-    'PROTECTION ACTIVATED',
-    String(urge.log.length) + ' time(s)',
-    '',
-    'RESTARTS',
-    ...(urge.lapses.length ? urge.lapses.map((l) => `- ${new Date(l.at).toLocaleDateString()}${l.note ? ': ' + l.note : ''}`) : ['(none)'])
-  ];
-  return lines.join('\n');
-}
-
 // ---------------------------------------------------------------- urge shield
 
 /* "I'm tempted" turns protection on for an hour. This is a save, not a lapse,
@@ -582,18 +545,21 @@ function analyticsStats() {
   if (!p.since) return { hasData: false };
   const u = loadUrge();
 
-  const kept30 = dailyKept(30);
-  const keptDays = kept30.filter((v) => v === 100).length;
-  const rate = kept30.length ? Math.round((keptDays / kept30.length) * 100) : 100;
+  /* Every day since the commitment was made. */
+  const days = dailyKept(3650);
+  const keptDays = days.filter((v) => v === 100).length;
+  const rate = days.length ? Math.round((keptDays / days.length) * 100) : 100;
 
-  // Only comparable once there is an earlier window to compare against.
-  const kept60 = dailyKept(60);
-  const prev = kept60.slice(0, Math.max(0, kept60.length - kept30.length));
-  const rateDelta = prev.length >= 7
-    ? rate - Math.round((prev.filter((v) => v === 100).length / prev.length) * 100)
+  /* Momentum: the last thirty days against everything before them. Only
+     shown once both stretches are long enough to mean anything. */
+  const recent = days.slice(-30);
+  const earlier = days.slice(0, Math.max(0, days.length - 30));
+  const rateDelta = earlier.length >= 7 && recent.length >= 7
+    ? Math.round((recent.filter((v) => v === 100).length / recent.length) * 100)
+      - Math.round((earlier.filter((v) => v === 100).length / earlier.length) * 100)
     : null;
-  const rateNote = 'You kept your commitment on ' + keptDays + ' of the last ' +
-    kept30.length + (kept30.length === 1 ? ' day.' : ' days.');
+  const rateNote = 'You kept your commitment on ' + keptDays + ' of ' +
+    days.length + (days.length === 1 ? ' day.' : ' days.');
 
   const hw = hardestWindow();
   const hardestNote = hw.label === '–'

@@ -38,8 +38,9 @@ function persistOaths() {
 const APP_LIST = ['Reddit', 'X', 'Instagram', 'TikTok', 'YouTube', 'Safari'];
 
 /* How many days back each range reaches; ALL is clamped to the oath date. */
-const RANGE_DAYS = { '7D': 7, '30D': 30, '90D': 90, 'ALL': 3650 };
-const RANGE_AXIS = { '7D': '7 days ago', '30D': '30 days ago', '90D': '90 days ago', 'ALL': 'Day one' };
+/* Analytics shows everything since day one. dailyKept clamps to the date the
+   commitment was made, so this is simply "all of it". */
+const ALL_TIME = 3650;
 
 
 const NIGHT_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -58,7 +59,6 @@ const S = {
   ivOathId: null,
   ivAction: '',
   left: 60,
-  range: '30D',
   draft: null,         // the oath being created/edited, or null
   sheetFrom: null,     // tab the oath sheet was opened from
   sheetSection: null,  // expanded sheet row: null | 'time' | 'until' | 'apps'
@@ -827,10 +827,10 @@ function analyticsTab() {
   if (!STATS.hasData) {
     return `
       <div class="an-head">
-        <div class="an-head__title">YOUR LAST 30 DAYS</div>
+        <div class="an-head__title">YOUR RECORD</div>
         <div class="an-head__sub">Three measures of how you are actually behaving.</div>
       </div>
-      <div class="scroll" style="top:calc(106px + var(--safe-top));bottom:var(--nav-h);padding:22px 20px 24px">
+      <div class="scroll" style="top:calc(96px + var(--safe-top));bottom:var(--nav-h);padding:14px 20px 24px">
         <div class="empty">Nothing to measure yet.<br>Your record starts with your first protected night.</div>
       </div>`;
   }
@@ -838,7 +838,7 @@ function analyticsTab() {
   /* Each day was either kept or it was not, so it is drawn that way: one
      cell per day, filled when kept and marked when broken. Rendering binary
      data as full-height bars produced a solid white block that said nothing. */
-  const bars = dailyKept(RANGE_DAYS[S.range]);
+  const bars = dailyKept(ALL_TIME);
   const gap = bars.length > 40 ? 1 : bars.length > 12 ? 2 : 4;
 
   const chart = bars.map((v, i) => {
@@ -871,17 +871,12 @@ function analyticsTab() {
 
   return `
     <div class="an-head">
-      <div class="an-head__title">YOUR LAST 30 DAYS</div>
+      <div class="an-head__title">YOUR RECORD</div>
       <div class="an-head__sub">Three measures of how you are actually behaving.</div>
     </div>
 
-    <div class="ranges" role="tablist" aria-label="Date range">
-      ${['7D', '30D', '90D', 'ALL'].map((label) => `
-        <button type="button" class="rangetab${on(S.range === label)}" role="tab"
-          aria-selected="${S.range === label}" data-act="range" data-range="${label}">${label}</button>`).join('')}
-    </div>
 
-    <div class="scroll" style="top:calc(106px + var(--safe-top));bottom:var(--nav-h);padding:22px 20px 24px">
+    <div class="scroll" style="top:calc(96px + var(--safe-top));bottom:var(--nav-h);padding:14px 20px 24px">
       <div class="scroll__breathe">
 
       ${card(1, 'Commitment rate', `${STATS.rate}<small>%</small>`,
@@ -913,7 +908,7 @@ function analyticsPage() {
   const STATS = analyticsStats();
   if (!STATS.hasData) return '';
 
-  const bars = dailyKept(RANGE_DAYS[S.range]);
+  const bars = dailyKept(ALL_TIME);
   const gap = bars.length > 40 ? 1 : bars.length > 12 ? 2 : 4;
   const strip = bars.map((v, i) => `<div class="dc${v === 100 ? '' : ' dc--broke'}${i === bars.length - 1 ? ' dc--today' : ''}"></div>`).join('');
   const kept = bars.filter((v) => v === 100).length;
@@ -932,7 +927,7 @@ function analyticsPage() {
       <div class="an-block">
         <div class="an-block__label">EVERY DAY IN THIS RANGE</div>
         <div class="daystrip" style="margin-top:14px;gap:${gap}px">${strip}</div>
-        <div class="axis" style="margin-top:10px"><span>${bars.length >= RANGE_DAYS[S.range] ? RANGE_AXIS[S.range] : 'Day one'}</span><span>Today</span></div>
+        <div class="axis" style="margin-top:10px"><span>Day one</span><span>Today</span></div>
         <div class="an-legend">
           <span><i style="background:rgba(242,240,236,.22)"></i>Kept</span>
           <span><i style="background:#d6544a"></i>Broken</span>
@@ -1168,7 +1163,6 @@ function settingsTab() {
       <div style="padding:24px 24px 0" class="page-title">SETTINGS</div>
 
       <button type="button" class="card account" data-act="account">
-        <span class="account__ring">${svg(PERSON, 24, DIM)}</span>
         <span style="flex:1">
           <span class="account__tag" style="display:block">SWORN MEMBER</span>
           <span class="account__name" style="display:block">${esc((USER.name || 'Your account').toUpperCase())}</span>
@@ -1190,7 +1184,6 @@ function settingsTab() {
       <div class="group-label" style="margin-top:24px">PREFERENCES</div>
       <div class="group">
         ${settingsRow(BELL, 'Notifications', 'Daily')}
-        ${settingsRow(EXPORT, 'Export my record', '', 'export')}
         ${S.confirmReplay
           ? `<button type="button" class="row dev-row--danger" data-act="replay-onboarding">
               <span class="row__left">${svg(REPLAY, 20, '#e88178')}<span class="row__name" style="color:#e88178">Tap again to confirm</span></span>
@@ -1571,7 +1564,6 @@ document.getElementById('phone').addEventListener('click', (e) => {
       S.whyEditing = false;
       return render();
     }
-    case 'range': S.range = el.dataset.range; return render();
     case 'an-open': S.anCard = Number(el.dataset.card); return render();
     case 'an-close': S.anCard = null; return render();
     case 'oath-toggle': {
@@ -1652,7 +1644,6 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'doc-privacy': S.page = 'privacy'; return render();
     case 'review': return native({ action: 'review' });
     case 'subscription': return native({ action: 'manageSubscription' });
-    case 'export': return native({ action: 'export', text: exportRecord() });
     case 'sign-out': S.page = null; return native({ action: 'signOut' });
     case 'apps-under-oath': {
       const target = OATHS.find((o) => o.on) || OATHS[0];

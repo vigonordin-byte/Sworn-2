@@ -204,9 +204,6 @@ struct WebView: UIViewRepresentable {
                 case "manageSubscription":
                     await Self.manageSubscription()
 
-                case "export":
-                    Self.share(text: body["text"] as? String ?? "")
-
                 case "signOut":
                     self.onSignOut?()
 
@@ -282,17 +279,6 @@ struct WebView: UIViewRepresentable {
                     await UIApplication.shared.open(url)
                 }
             }
-        }
-
-        @MainActor
-        private static func share(text: String) {
-            guard !text.isEmpty, let root = activeScene()?.keyWindow?.rootViewController else { return }
-            let sheet = UIActivityViewController(activityItems: [text], applicationActivities: nil)
-            // iPad needs an anchor or it throws.
-            sheet.popoverPresentationController?.sourceView = root.view
-            sheet.popoverPresentationController?.sourceRect = CGRect(
-                x: root.view.bounds.midX, y: root.view.bounds.midY, width: 0, height: 0)
-            root.present(sheet, animated: true)
         }
 
         @MainActor
