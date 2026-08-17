@@ -688,7 +688,16 @@ function armReveal() {
 
 /** The decision, revealed only once the countdown is spent. */
 function decisionBar() {
-  if (S.left > 0) return '';
+  /* Before zero there is exactly one way out, and it is the right one.
+     The countdown exists to stop an impulsive decision to give in, not to
+     trap someone who has already chosen to keep their word — so leaving
+     early is offered, quietly, and only ever in that direction. */
+  if (S.left > 0) {
+    return `
+      <div class="iv__decision iv__decision--early">
+        <button type="button" class="iv__stay" data-act="iv-back">I'm staying on track</button>
+      </div>`;
+  }
   if (S.ivMode === 'bypass') {
     return `
       <div class="iv__decision">

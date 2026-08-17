@@ -1607,3 +1607,23 @@ body { font-family: var(--sf); }
 @media (prefers-reduced-motion: reduce) {
   .rc { transition: none; }
 }
+
+/* The early exit. Present from the first second but deliberately quiet, so
+   it never competes with the reflection — it waits to be looked for. */
+.iv__decision--early { justify-content: center; }
+
+.iv__stay {
+  padding: 13px 22px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: rgba(242, 240, 236, .6);
+  font-family: var(--sf);
+  font-size: 14.5px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: color .2s ease, border-color .2s ease;
+}
+.iv__stay:hover { color: var(--ink); border-color: rgba(255, 255, 255, .24); }
