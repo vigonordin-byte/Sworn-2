@@ -61,6 +61,15 @@ final class ScreenTime: ObservableObject {
     /// Called after a pick so the web layer can relabel the row.
     var onCountsChanged: (() -> Void)?
 
+    /// Called after every sync so the web layer can show which commitments are
+    /// genuinely armed and why any are not. Claiming protection that iOS
+    /// refused to schedule is the worst thing this app could do.
+    var onArmedChanged: (([String: String]) -> Void)?
+
+    /// iOS refuses to monitor a window shorter than this, silently making the
+    /// commitment do nothing at all.
+    static let minimumWindowMinutes = 15
+
     /// oath id → counts per kind. Reads the stored selections directly:
     /// during onboarding nothing has synced yet, and a version keyed off
     /// `oaths` reported an empty dict forever — the picker row stayed at
@@ -86,8 +95,13 @@ final class ScreenTime: ObservableObject {
            deleted entirely: a deleted oath is simply absent here, so without
            sweeping the registry its shield had nothing left to lower it. */
         let live = Set(oaths.filter { $0.on }.map { $0.id })
+        let known = Set(oaths.map { $0.id })
         for id in Shared.knownOathIds where !live.contains(id) {
             Shared.store(id).clearAllSettings()
+            // A selection whose commitment no longer exists is a ghost: it
+            // would still be counted as protection and pulled into an urge
+            // shield. Forget it outright.
+            if !known.contains(id) { Shared.forget(oathId: id) }
         }
 
         // An urge shield blocks the union of every selection. Once the last
@@ -98,17 +112,19 @@ final class ScreenTime: ObservableObject {
             lowerUrgeShield()
         }
 
+        var status: [String: String] = [:]
+
         for oath in oaths where oath.on {
             Shared.registerOath(oath.id)
             Shared.saveDays(oath.days, for: oath.id)
 
-            guard
-                !oath.days.isEmpty,
-                Shared.selectionCount(for: oath.id) > 0,
-                let start = Self.components(oath.time),
-                let end = Self.components(oath.until),
-                start != end                       // a zero-length window is rejected by iOS
-            else { continue }
+            guard !oath.days.isEmpty else { status["\(oath.id)"] = "noDays"; continue }
+            guard Shared.selectionCount(for: oath.id) > 0 else { status["\(oath.id)"] = "noApps"; continue }
+            guard let start = Self.components(oath.time),
+                  let end = Self.components(oath.until) else { status["\(oath.id)"] = "badTime"; continue }
+            guard Self.windowMinutes(from: start, to: end) >= Self.minimumWindowMinutes else {
+                status["\(oath.id)"] = "tooShort"; continue
+            }
 
             let schedule = DeviceActivitySchedule(
                 intervalStart: start,
@@ -121,10 +137,21 @@ final class ScreenTime: ObservableObject {
                     DeviceActivityName(Shared.activityName(oath.id)),
                     during: schedule
                 )
+                status["\(oath.id)"] = "armed"
             } catch {
                 NSLog("Sworn: could not monitor oath \(oath.id): \(error.localizedDescription)")
+                status["\(oath.id)"] = "failed"
             }
         }
+
+        onArmedChanged?(status)
+    }
+
+    /// Length of a window in minutes, counting one that runs past midnight.
+    private static func windowMinutes(from start: DateComponents, to end: DateComponents) -> Int {
+        let a = (start.hour ?? 0) * 60 + (start.minute ?? 0)
+        let b = (end.hour ?? 0) * 60 + (end.minute ?? 0)
+        return b > a ? b - a : (24 * 60 - a) + b
     }
 
     // MARK: the urge shield

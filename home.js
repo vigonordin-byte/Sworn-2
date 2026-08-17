@@ -61,6 +61,7 @@ const S = {
   left: 60,
   draft: null,         // the oath being created/edited, or null
   sheetFrom: null,     // tab the oath sheet was opened from
+  sheetError: null,    // why a commitment could not be saved
   sheetSection: null,  // expanded sheet row: null | 'time' | 'until' | 'apps'
   whyOpen: false,
   whyEditing: false,
@@ -218,6 +219,35 @@ const native = (msg) => window.webkit?.messageHandlers?.sworn?.postMessage(msg);
 /** oath id -> how many apps/categories Screen Time is covering. */
 let shieldCounts = {};
 
+/* What iOS actually accepted, per commitment. A window it refused is worse
+   than useless: the app would claim protection that never arms and never
+   lifts, which is exactly what a shorter-than-allowed window did. */
+let armedStatus = {};
+
+const MIN_WINDOW_MINUTES = 15;
+
+/** Minutes a window covers, counting one that runs past midnight. */
+function windowMinutes(from, to) {
+  const [ah, am] = from.split(':').map(Number);
+  const [bh, bm] = to.split(':').map(Number);
+  const a = ah * 60 + am;
+  const b = bh * 60 + bm;
+  return b > a ? b - a : (24 * 60 - a) + b;
+}
+
+/** Plain English for anything stopping a commitment from protecting. */
+function armedProblem(oath) {
+  if (!oath.on) return '';
+  if (windowMinutes(oath.time, oath.until) < MIN_WINDOW_MINUTES) {
+    return `Too short to run. iOS needs at least ${MIN_WINDOW_MINUTES} minutes.`;
+  }
+  if (!oath.days.length) return 'No nights chosen, so it never runs.';
+  if (!shieldCount(oath)) return 'No apps chosen, so nothing is blocked.';
+  const state = armedStatus[oath.id];
+  if (state === 'failed') return 'iOS refused this schedule. Try different hours.';
+  return '';
+}
+
 window.sworn = {
   /* Where a tapped notification wanted to go. */
   onRoute(route) {
@@ -229,6 +259,8 @@ window.sworn = {
   },
 
   onNotifyPermission() { render(); },
+
+  onArmed(status) { armedStatus = status || {}; render(); },
 
   onNotifyList(list) { if (typeof SwornDev !== 'undefined') SwornDev.setScheduled(list); },
 
@@ -742,9 +774,14 @@ function decisionBar() {
 let shieldCountsReady = false;
 
 function anythingShielded() {
-  if (!NATIVE) return OATHS.some((o) => o.apps.length > 0);
+  /* Only a selection belonging to a commitment that exists and is switched on
+     counts. Reading the stored counts alone would let a leftover selection —
+     one whose commitment was deleted — keep the app claiming protection. */
+  const live = OATHS.filter((o) => o.on);
+  if (!live.length) return false;
+  if (!NATIVE) return live.some((o) => o.apps.length > 0);
   if (!shieldCountsReady) return true;
-  return Object.values(shieldCounts).some((bd) => selectionTotal(bd) > 0);
+  return live.some((o) => selectionTotal(shieldCounts[o.id]) > 0);
 }
 
 const RING_CIRCUMFERENCE = 2 * Math.PI * 46;
@@ -1057,7 +1094,8 @@ function commitmentsTab() {
           <div class="oath__body">
             <div>
               <div style="font-size:12.5px;color:rgba(242,240,236,.45)">${esc(scheduleLabel(o.days))}</div>
-              <div class="oath__time" style="color:${o.on ? '#f2f0ec' : 'rgba(242,240,236,.35)'}">${esc(o.time)}</div>
+              <div class="oath__time" style="color:${o.on ? '#f2f0ec' : 'rgba(242,240,236,.35)'}">${esc(o.time)} – ${esc(o.until)}</div>
+              ${armedProblem(o) ? `<div class="oath__warn">${esc(armedProblem(o))}</div>` : ''}
             </div>
             <button type="button" class="switch${on(o.on)}" data-act="oath-toggle" data-id="${o.id}"
               role="switch" aria-checked="${o.on}" aria-label="${esc(o.name)}"><i></i></button>
@@ -1152,6 +1190,8 @@ function oathSheet() {
 
 
       ${editing ? '<button type="button" class="oath-break" data-act="oath-break">Break this commitment</button>' : ''}
+
+      ${S.sheetError ? `<div class="sheet-error">${esc(S.sheetError)}</div>` : ''}
 
       <button type="button" class="sheet-btn" data-act="sheet-save" id="oathsave"${ready ? '' : ' disabled'}>${editing ? 'SAVE CHANGES' : 'COMMIT'}</button>
       <div style="margin-top:11px;text-align:center;font-size:11.5px;color:rgba(242,240,236,.32)">Breaking a commitment early is recorded in your history.</div>
@@ -1661,16 +1701,25 @@ document.getElementById('phone').addEventListener('click', (e) => {
       S.sheetFrom = S.tab;
       S.draft = blankOath();
       S.sheetSection = null;
+      S.sheetError = null;
       return render();
     case 'sheet-cancel':
       S.tab = S.sheetFrom || S.tab;
       S.sheetFrom = null;
       S.draft = null;
       S.sheetSection = null;
+      S.sheetError = null;
       return render();
     case 'sheet-save': {
       const d = S.draft;
       if (!d || !d.name.trim()) return;
+      // Saving a window iOS will not schedule would mean promising protection
+      // that never arrives, so it is refused here with the reason.
+      if (windowMinutes(d.time, d.until) < MIN_WINDOW_MINUTES) {
+        S.sheetError = `A window has to be at least ${MIN_WINDOW_MINUTES} minutes for iOS to run it.`;
+        return render();
+      }
+      S.sheetError = null;
       d.name = d.name.trim();
       const wasNew = d.id === null;
       if (d.id === null) {
@@ -1788,6 +1837,7 @@ document.getElementById('phone').addEventListener('input', (e) => {
 
   if (field === 'time' || field === 'until') {
     S.draft[field] = e.target.value;
+    S.sheetError = null;
     const label = document.querySelector(`[data-section="${field}"] .tile__val`);
     if (label) label.textContent = e.target.value;
   }

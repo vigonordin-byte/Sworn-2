@@ -1703,3 +1703,23 @@ body { font-family: var(--sf); }
   text-wrap: pretty;
 }
 .an-note--dim { margin-top: 12px; font-size: 13.5px; color: var(--label); }
+
+/* A commitment that cannot actually protect says so on its own row, rather
+   than sitting there looking armed. */
+.oath__warn {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #e88178;
+}
+
+.sheet-error {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(214, 84, 74, .12);
+  border: 1px solid rgba(214, 84, 74, .3);
+  font-size: 13px;
+  line-height: 1.45;
+  color: #e88178;
+}

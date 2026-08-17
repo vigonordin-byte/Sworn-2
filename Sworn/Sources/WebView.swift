@@ -103,6 +103,11 @@ struct WebView: UIViewRepresentable {
             screenTime.onCountsChanged = { [weak self] in
                 Task { @MainActor in self?.reportCounts() }
             }
+            // Whether iOS actually accepted each schedule, so the UI can stop
+            // claiming protection that was never armed.
+            screenTime.onArmedChanged = { [weak self] status in
+                Task { @MainActor in self?.reportArmed(status) }
+            }
         }
 
         func userContentController(_ controller: WKUserContentController,
@@ -326,6 +331,13 @@ struct WebView: UIViewRepresentable {
             guard let json = try? JSONSerialization.data(withJSONObject: counts),
                   let text = String(data: json, encoding: .utf8) else { return }
             call("window.sworn.onCounts(\(text))")
+        }
+
+        @MainActor
+        func reportArmed(_ status: [String: String]) {
+            guard let json = try? JSONSerialization.data(withJSONObject: status),
+                  let text = String(data: json, encoding: .utf8) else { return }
+            call("window.sworn.onArmed && window.sworn.onArmed(\(text))")
         }
 
         @MainActor
