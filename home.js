@@ -60,6 +60,7 @@ const S = {
   left: 60,
   range: '30D',
   draft: null,         // the oath being created/edited, or null
+  sheetFrom: null,     // tab the oath sheet was opened from
   sheetSection: null,  // expanded sheet row: null | 'time' | 'until' | 'apps'
   whyOpen: false,
   whyEditing: false,
@@ -1595,11 +1596,15 @@ document.getElementById('phone').addEventListener('click', (e) => {
       return render();
     }
     case 'sheet-new':
-      S.tab = 'commitments';
+      // The sheet floats over whatever tab you were on, so opening it should
+      // not move you. Cancelling then leaves you exactly where you started.
+      S.sheetFrom = S.tab;
       S.draft = blankOath();
       S.sheetSection = null;
       return render();
     case 'sheet-cancel':
+      S.tab = S.sheetFrom || S.tab;
+      S.sheetFrom = null;
       S.draft = null;
       S.sheetSection = null;
       return render();
@@ -1615,6 +1620,9 @@ document.getElementById('phone').addEventListener('click', (e) => {
       }
       S.draft = null;
       S.sheetSection = null;
+      S.sheetFrom = null;
+      // Land on the list, where what you just made is visible.
+      S.tab = 'commitments';
       persistOaths();
       return render();
     }
@@ -1623,6 +1631,8 @@ document.getElementById('phone').addEventListener('click', (e) => {
       OATHS = OATHS.filter((o) => o.id !== gone);
       S.draft = null;
       S.sheetSection = null;
+      S.sheetFrom = null;
+      S.tab = 'commitments';
       if (NATIVE) native({ action: 'forget', oathId: gone });
       persistOaths();
       return render();
