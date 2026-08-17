@@ -1116,15 +1116,25 @@ function commitmentsTab() {
 
 const countLabel = (n) => n + (n === 1 ? ' app' : ' apps');
 
+/* The id is reserved up front rather than assigned on save: Apple's picker
+   writes its selection against an oath id, so without one there was no way to
+   choose apps before saving — and no way to save, now that a commitment
+   without apps is refused. A draft that is cancelled leaves a selection with
+   no commitment behind it, which the next sync forgets. */
 function blankOath() {
-  return { id: null, name: '', time: '20:00', until: '06:00', days: [0, 1, 2, 3, 4, 5, 6], apps: [], on: true };
+  return { id: nextOathId, isNew: true, name: '', time: '20:00', until: '06:00',
+           days: [0, 1, 2, 3, 4, 5, 6], apps: [], on: true };
 }
 
 function oathSheet() {
   if (!S.draft) return '';
   const d = S.draft;
-  const editing = d.id !== null;
-  const ready = d.name.trim().length > 0;
+  const editing = !d.isNew;
+  /* A commitment with no apps blocks nothing, so it is not a commitment.
+     Requiring one here is what stops the app promising protection it has no
+     way to deliver. */
+  const picked = NATIVE ? shieldCount(d) : d.apps.length;
+  const ready = d.name.trim().length > 0 && picked > 0;
   const sec = S.sheetSection;
 
   const row = (label, value, section, icon) => `
@@ -1146,16 +1156,14 @@ function oathSheet() {
         value="${esc(d.name)}" placeholder="Name your commitment" autocomplete="off">
 
       ${row('Locks at', d.time, 'time')}
-      ${sec === 'time' ? `
-        <div class="tile tile--sub">
-          <input type="time" class="time-input" data-field="time" value="${esc(d.time)}">
-        </div>` : ''}
+      <div class="tile tile--sub" data-sub="time"${sec === 'time' ? '' : ' hidden'}>
+        <input type="time" class="time-input" data-field="time" value="${esc(d.time)}">
+      </div>
 
       ${row('Unlocks at', d.until, 'until')}
-      ${sec === 'until' ? `
-        <div class="tile tile--sub">
-          <input type="time" class="time-input" data-field="until" value="${esc(d.until)}">
-        </div>` : ''}
+      <div class="tile tile--sub" data-sub="until"${sec === 'until' ? '' : ' hidden'}>
+        <input type="time" class="time-input" data-field="until" value="${esc(d.until)}">
+      </div>
 
       <div class="tile" style="margin-top:11px;padding:18px">
         <div style="font-size:13px;color:rgba(242,240,236,.55)">On these nights <span style="color:rgba(242,240,236,.35)">· ${esc(scheduleLabel(d.days))}</span></div>
@@ -1167,24 +1175,22 @@ function oathSheet() {
       </div>
 
       ${NATIVE ? `
-      <button type="button" class="tile tile--row" style="margin-top:11px" data-act="pick-apps" data-id="${d.id === null ? '' : d.id}">
+      <button type="button" class="tile tile--row" style="margin-top:11px" data-act="pick-apps" data-id="${d.id}">
         <span class="row__left">${svg(LOCK, 19, DIM)}<span style="font-weight:600">App blocking</span></span>
         <span class="tile__value">${shieldCount(d) ? esc(selectionLabel(shieldBreakdown(d))) : 'None yet'}<span class="tile__chev">›</span></span>
       </button>
-      ${d.id === null ? '<div class="tile-note">Make your commitment first, then choose which apps to protect.</div>' : ''}
       ` : `
       ${row('App blocking', countLabel(d.apps.length), 'apps', LOCK)}
-      ${sec === 'apps' ? `
-        <div class="tile tile--sub">
-          ${APP_LIST.map((name) => {
-            const picked = d.apps.includes(name);
-            return `
-            <button type="button" class="pick${on(picked)}" data-act="app" data-app="${esc(name)}" aria-pressed="${picked}">
-              <span>${esc(name)}</span>
-              <span class="pick__mark">${picked ? svg('<path d="M4 12.5l5 5L20 6.5"/>', 17, '#34c759', 2.4) : ''}</span>
-            </button>`;
-          }).join('')}
-        </div>` : ''}
+      <div class="tile tile--sub" data-sub="apps"${sec === 'apps' ? '' : ' hidden'}>
+        ${APP_LIST.map((name) => {
+          const picked = d.apps.includes(name);
+          return `
+          <button type="button" class="pick${on(picked)}" data-act="app" data-app="${esc(name)}" aria-pressed="${picked}">
+            <span>${esc(name)}</span>
+            <span class="pick__mark">${picked ? svg('<path d="M4 12.5l5 5L20 6.5"/>', 17, '#34c759', 2.4) : ''}</span>
+          </button>`;
+        }).join('')}
+      </div>
       <div class="tile-note">Preview only. Real blocking uses Apple's picker inside the app.</div>
       `}
 
@@ -1192,6 +1198,7 @@ function oathSheet() {
       ${editing ? '<button type="button" class="oath-break" data-act="oath-break">Break this commitment</button>' : ''}
 
       ${S.sheetError ? `<div class="sheet-error">${esc(S.sheetError)}</div>` : ''}
+      <div class="sheet-hint" id="oathhint"${ready || S.sheetError ? ' hidden' : ''}>Choose at least one app for this to protect.</div>
 
       <button type="button" class="sheet-btn" data-act="sheet-save" id="oathsave"${ready ? '' : ' disabled'}>${editing ? 'SAVE CHANGES' : 'COMMIT'}</button>
       <div style="margin-top:11px;text-align:center;font-size:11.5px;color:rgba(242,240,236,.32)">Breaking a commitment early is recorded in your history.</div>
@@ -1706,9 +1713,12 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'sheet-cancel':
       S.tab = S.sheetFrom || S.tab;
       S.sheetFrom = null;
+      const abandoned = S.draft && S.draft.isNew;
       S.draft = null;
       S.sheetSection = null;
       S.sheetError = null;
+      // An abandoned draft may have stored a selection; sync forgets it.
+      if (abandoned) syncShields();
       return render();
     case 'sheet-save': {
       const d = S.draft;
@@ -1721,9 +1731,10 @@ document.getElementById('phone').addEventListener('click', (e) => {
       }
       S.sheetError = null;
       d.name = d.name.trim();
-      const wasNew = d.id === null;
-      if (d.id === null) {
-        d.id = nextOathId++;
+      const wasNew = d.isNew === true;
+      delete d.isNew;
+      if (wasNew) {
+        nextOathId = Math.max(nextOathId, d.id) + 1;
         OATHS.push(d);
       } else {
         OATHS = OATHS.map((o) => (o.id === d.id ? d : o));
@@ -1755,9 +1766,26 @@ document.getElementById('phone').addEventListener('click', (e) => {
       return native({ action: 'pick', oathId: id });
     }
     case 'section': {
+      /* Patched in place rather than re-rendered: rebuilding the sheet made
+         the whole screen flash, and the freshly built input then needed a
+         second tap before iOS would open its wheel. */
       const name = el.dataset.section;
       S.sheetSection = S.sheetSection === name ? null : name;
-      return render();
+      document.querySelectorAll('[data-sub]').forEach((sub) => {
+        sub.hidden = sub.dataset.sub !== S.sheetSection;
+      });
+      document.querySelectorAll('[data-act="section"]').forEach((row) => {
+        const open = row.dataset.section === S.sheetSection;
+        row.classList.toggle('is-on', open);
+        row.setAttribute('aria-expanded', open);
+      });
+      if (S.sheetSection === 'time' || S.sheetSection === 'until') {
+        const input = document.querySelector(`[data-sub="${S.sheetSection}"] input`);
+        // showPicker opens the wheel directly; focus is the fallback where it
+        // is unavailable, and neither is worth an error if the tap was quick.
+        if (input) { try { input.showPicker(); } catch (e) { input.focus(); } }
+      }
+      return;
     }
     case 'day': toggle(S.draft.days, i); return render();
     case 'app': toggle(S.draft.apps, el.dataset.app); return render();
@@ -1830,8 +1858,13 @@ document.getElementById('phone').addEventListener('input', (e) => {
 
   if (field === 'name') {
     S.draft.name = e.target.value;
+    // Patched rather than re-rendered so the caret never jumps mid-word.
+    const has = (NATIVE ? shieldCount(S.draft) : S.draft.apps.length) > 0;
+    const ok = !!S.draft.name.trim() && has;
     const save = document.getElementById('oathsave');
-    if (save) save.disabled = !S.draft.name.trim();
+    if (save) save.disabled = !ok;
+    const hint = document.getElementById('oathhint');
+    if (hint) hint.hidden = ok;
     return;
   }
 
