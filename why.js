@@ -315,6 +315,7 @@ function recordLapse(note, reason) {
   saveProgress({ since: at, oathAt: p.oathAt, best: p.best });
   pushEvent('commitment_broken', at, reason);
   pushProfile();
+  bridge({ action: 'notifyBreak', prefs: loadNotifPrefs() });
 }
 
 /** They reached zero and chose to go back. */
@@ -367,6 +368,52 @@ function endUrge() {
    either way, and nothing ever waits on them. */
 function bridge(msg) {
   try { window.webkit?.messageHandlers?.sworn?.postMessage(msg); } catch (e) { /* no host */ }
+}
+
+/* Which categories of notification the user allows. Everything defaults on
+   except the two that would create noise, and this is the single source the
+   native scheduler is handed. */
+const NOTIF_KEY = 'sworn.notif';
+
+const NOTIF_DEFAULTS = {
+  protection: true,
+  protectionEnd: false,
+  earlyReminder: false,
+  milestones: true,
+  commitment: true,
+  why: true,
+  recovery: true,
+  reengagement: true
+};
+
+function loadNotifPrefs() {
+  try {
+    const raw = localStorage.getItem(NOTIF_KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (p && typeof p === 'object') return { ...NOTIF_DEFAULTS, ...p };
+    }
+  } catch (e) { /* storage blocked */ }
+  return { ...NOTIF_DEFAULTS };
+}
+
+function saveNotifPrefs(p) {
+  try { localStorage.setItem(NOTIF_KEY, JSON.stringify(p)); } catch (e) { /* blocked */ }
+}
+
+/* Hand the native scheduler everything it needs to rebuild from scratch. Sent
+   whenever commitments, streak, behaviour or preferences change, and at
+   launch — so a stale reminder for a commitment that moved cannot exist. */
+function syncNotifications(oaths) {
+  const p = loadProgress();
+  bridge({
+    action: 'notifySync',
+    behavior: behaviorChosen() ? loadBehavior() : 'porn',
+    why: loadWhy().text || '',
+    streakSince: p.since || 0,
+    oaths: oaths || [],
+    prefs: loadNotifPrefs()
+  });
 }
 
 /** The persistent profile: behaviour, why record, oath and streak dates. */

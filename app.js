@@ -824,9 +824,23 @@ function notify() {
   return `
     <div class="screen notify anim-rise-fast">
       <div style="align-self:flex-start">${backCircle()}</div>
-      <div style="margin-top:120px">${BELL}</div>
-      <div style="margin-top:40px;text-align:center;font-size:25px;font-weight:700;letter-spacing:3.8px;line-height:1.2">STAY ON TRACK WITH REMINDERS</div>
+      <div style="margin-top:76px">${BELL}</div>
+      <div style="margin-top:34px;text-align:center;font-size:25px;font-weight:700;letter-spacing:3.8px;line-height:1.2">SO SWORN CAN SHOW UP</div>
       <div class="serif" style="margin-top:18px;text-align:center;font-size:20px;line-height:1.4;color:rgba(242,240,236,.55);text-wrap:pretty">${esc(B().notifyLine)}</div>
+      <div style="margin-top:26px;display:flex;flex-direction:column;gap:12px;text-align:left">
+        ${[['Before your protection begins', 'A reminder shortly before a window you set.'],
+           ['When something matters', 'A milestone worth marking, or a way back after a lapse.'],
+           ['Nothing else', 'No daily streaks, no motivation. Sworn is quiet otherwise.']]
+          .map(([head, sub]) => `
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <span style="flex:0 0 auto;color:#e7bc6a;font-size:15px;font-weight:700;line-height:1.4">✓</span>
+            <span>
+              <span style="display:block;font-size:14.5px;font-weight:600">${esc(head)}</span>
+              <span style="display:block;margin-top:2px;font-size:13px;line-height:1.4;color:rgba(242,240,236,.45)">${esc(sub)}</span>
+            </span>
+          </div>`).join('')}
+      </div>
+      <div style="margin-top:20px;text-align:center;font-size:12.5px;line-height:1.5;color:rgba(242,240,236,.38);text-wrap:pretty">Nothing Sworn sends names what you are working on.</div>
       <button class="cta cta--glow" style="margin-top:auto;letter-spacing:2.4px" data-act="notify-on">Enable notifications</button>
       <button type="button" class="notlater" data-act="next">Not now</button>
     </div>`;

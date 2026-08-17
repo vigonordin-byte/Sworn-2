@@ -193,10 +193,35 @@ struct WebView: UIViewRepresentable {
                     RevealHaptics.shared.run(ms: body["ms"] as? Double ?? 0)
 
                 case "notify":
-                    // The real permission prompt; iOS shows it once. There is
-                    // nothing scheduled yet — this only secures the right to.
-                    _ = try? await UNUserNotificationCenter.current()
-                        .requestAuthorization(options: [.alert, .badge, .sound])
+                    // Asked once, after onboarding has explained why.
+                    let granted = await Notifications.shared.requestAuthorization()
+                    self.call("window.sworn.onNotifyPermission(\(granted))")
+
+                case "notifySync":
+                    // The whole schedule is rebuilt from this snapshot, so a
+                    // changed or deleted commitment leaves nothing behind.
+                    await Notifications.shared.sync(NotifState(body))
+
+                case "notifyBreak":
+                    Notifications.shared.recordBreak(prefs: NotifPrefs(body["prefs"] as? [String: Any]))
+
+                case "notifyRecommit":
+                    Notifications.shared.recommitted(prefs: NotifPrefs(body["prefs"] as? [String: Any]))
+
+                #if DEBUG
+                case "notifyTest":
+                    Notifications.shared.debugFire(kind: body["kind"] as? String ?? "", state: NotifState(body))
+
+                case "notifyList":
+                    let list = await Notifications.shared.debugList()
+                    if let data = try? JSONSerialization.data(withJSONObject: list),
+                       let json = String(data: data, encoding: .utf8) {
+                        self.call("window.sworn.onNotifyList(\(json))")
+                    }
+
+                case "notifyClear":
+                    Notifications.shared.cancelAll()
+                #endif
 
                 case "review":
                     Self.requestReview()
@@ -248,6 +273,11 @@ struct WebView: UIViewRepresentable {
             // holds. The web layer merges conservatively: streak dates only if
             // older, events unioned, oaths only into an empty list.
             RevealHaptics.shared.prepare()
+
+            // A notification the user tapped to get here decides where to land.
+            if let route = Notifications.shared.consumeRoute() {
+                self.call("window.sworn.onRoute && window.sworn.onRoute('\(route)')")
+            }
 
             Task { @MainActor in
                 await SyncEngine.shared.flush()

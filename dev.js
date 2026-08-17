@@ -186,6 +186,50 @@ window.SwornDev = (() => {
     render();
   }
 
+  // ---- notifications -------------------------------------------------------
+
+  /* Every kind Sworn can send, on a 3 second delay so you can background the
+     app and see it land on the lock screen as a user would. */
+  const NOTIF_KINDS = [
+    ['protection', 'Protection soon'],
+    ['protectionEnd', 'Protection ended'],
+    ['milestone', 'Milestone'],
+    ['break', 'Commitment broken'],
+    ['recovery', 'Recovery follow-up'],
+    ['recommit', 'Recommitted'],
+    ['why', 'My why'],
+    ['commitment', 'Commitment reminder'],
+    ['reengage', 'Checking back in']
+  ];
+
+  function fireNotif(kind) {
+    native({
+      action: 'notifyTest',
+      kind,
+      behavior: behaviorChosen() ? loadBehavior() : 'porn',
+      why: loadWhy().text || '',
+      streakSince: loadProgress().since || 0,
+      oaths: typeof oathPayload === 'function' ? oathPayload() : [],
+      prefs: loadNotifPrefs()
+    });
+  }
+
+  let scheduled = [];
+  function listNotifs() {
+    native({ action: 'notifyList' });
+  }
+  function setScheduled(list) {
+    scheduled = Array.isArray(list) ? list : [];
+    render();
+  }
+  const getScheduled = () => scheduled;
+
+  function clearNotifs() {
+    native({ action: 'notifyClear' });
+    scheduled = [];
+    render();
+  }
+
   // ---- countdown shortcuts -------------------------------------------------
 
   const DURATION_KEY = 'sworn.dev.duration';
@@ -225,5 +269,6 @@ window.SwornDev = (() => {
   }
 
   return { STATES, apply, runPending, duration, setDuration, DURATIONS, STAGES, jumpTo,
+           NOTIF_KINDS, fireNotif, listNotifs, setScheduled, getScheduled, clearNotifs,
            BEHAVIOR_STATES, setBehavior, current: loadBehavior, chosen: behaviorChosen };
 })();

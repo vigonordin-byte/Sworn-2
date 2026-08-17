@@ -219,6 +219,19 @@ const native = (msg) => window.webkit?.messageHandlers?.sworn?.postMessage(msg);
 let shieldCounts = {};
 
 window.sworn = {
+  /* Where a tapped notification wanted to go. */
+  onRoute(route) {
+    if (route === 'achievements') { S.tab = 'home'; S.achievementsOpen = true; }
+    else if (route === 'why') { S.tab = 'home'; S.whyOpen = true; }
+    else if (route === 'commitments') { S.tab = 'commitments'; }
+    else { S.tab = 'home'; }
+    render();
+  },
+
+  onNotifyPermission() { render(); },
+
+  onNotifyList(list) { if (typeof SwornDev !== 'undefined') SwornDev.setScheduled(list); },
+
   onRestore(data) {
     try {
       if (!data || typeof data !== 'object') return;
@@ -293,6 +306,12 @@ function shieldCount(oath) {
 }
 
 /** Hand the device the current schedule. Every change routes through here. */
+/** The payload both the shields and the scheduler are built from. */
+function oathPayload() {
+  return OATHS.map((o) => ({ id: o.id, name: o.name, time: o.time, until: o.until,
+                             days: o.days, on: o.on, appCount: shieldCount(o) }));
+}
+
 function syncShields() {
   /* A running urge shield covers the union of every selection. Once the last
      one is gone it protects nothing, so it must not keep claiming to — the
@@ -301,11 +320,9 @@ function syncShields() {
     endUrge();
     if (NATIVE) native({ action: 'urgeClear' });
   }
+  syncNotifications(oathPayload());
   if (!NATIVE) return;
-  native({
-    action: 'sync',
-    oaths: OATHS.map((o) => ({ id: o.id, name: o.name, time: o.time, until: o.until, days: o.days, on: o.on, appCount: shieldCount(o) }))
-  });
+  native({ action: 'sync', oaths: oathPayload() });
 }
 
 // ---------------------------------------------------------------- home
@@ -1183,7 +1200,11 @@ function settingsTab() {
 
       <div class="group-label" style="margin-top:24px">PREFERENCES</div>
       <div class="group">
-        ${settingsRow(BELL, 'Notifications', 'Daily')}
+        ${settingsRow(BELL, 'Notifications', (() => {
+          const p = loadNotifPrefs();
+          const n = Object.keys(NOTIF_DEFAULTS).filter((k) => p[k]).length;
+          return n === 0 ? 'Off' : n + ' on';
+        })(), 'notifications-open')}
         ${S.confirmReplay
           ? `<button type="button" class="row dev-row--danger" data-act="replay-onboarding">
               <span class="row__left">${svg(REPLAY, 20, '#e88178')}<span class="row__name" style="color:#e88178">Tap again to confirm</span></span>
@@ -1254,6 +1275,37 @@ function accountPage() {
     <button type="button" class="oath-break" data-act="sign-out">Sign out</button>`);
 }
 
+/* Deliberately a handful of switches, not thirty. Each one is a reason Sworn
+   might speak, described in the words of what it would actually say. */
+const NOTIF_ROWS = [
+  ['protection', 'Protection reminders', 'Shortly before a window you set begins.'],
+  ['milestones', 'Milestones', 'The days that are worth marking.'],
+  ['recovery', 'Recovery', 'A way back if a commitment breaks.'],
+  ['commitment', 'Commitment reminders', 'An occasional note that it still stands.'],
+  ['why', 'My why', 'Your own words, rarely.'],
+  ['reengagement', 'Checking back in', 'Only if you go quiet for a while.'],
+  ['earlyReminder', 'Extra early reminder', 'A second nudge 30 minutes before.'],
+  ['protectionEnd', 'When protection ends', 'A note when a window closes.']
+];
+
+function notificationsPage() {
+  const p = loadNotifPrefs();
+  return pageShell('NOTIFICATIONS', `
+    <div class="doc-note" style="margin-top:0">Sworn stays quiet unless something matters. Nothing it sends names what you are working on, so a notification on your lock screen gives nothing away.</div>
+    <div class="group" style="margin:18px 0 0">
+      ${NOTIF_ROWS.map(([key, name, desc]) => `
+        <div class="row" style="align-items:flex-start">
+          <span class="row__left" style="display:block;flex:1">
+            <span class="row__name" style="display:block">${esc(name)}</span>
+            <span class="dev-note" style="margin-top:3px">${esc(desc)}</span>
+          </span>
+          <button type="button" class="switch${on(p[key])}" data-act="notif-toggle" data-key="${key}"
+            role="switch" aria-checked="${p[key]}" aria-label="${esc(name)}"><i></i></button>
+        </div>`).join('')}
+    </div>
+    <div class="doc-note">Turned off here, Sworn will not send that kind at all. Your protection, the intervention and your record work exactly the same either way.</div>`);
+}
+
 const DOCS = {
   support: ['SUPPORT', `
     <p>Sworn is made by a very small team. If something is broken, or the app is not doing what you expected, tell us through the App Store's support link and a person will read it.</p>
@@ -1309,6 +1361,7 @@ function docPage(kind) {
    takes you into the genuine screens, not a mock of them. */
 function settingsPage() {
   switch (S.page) {
+    case 'notifications': return notificationsPage();
     case 'account': return accountPage();
     case 'support': return docPage('support');
     case 'terms': return docPage('terms');
@@ -1343,6 +1396,25 @@ function devPage() {
               </span>
               <span class="chev">›</span>
             </button>`).join('')}
+        </div>
+
+        <div class="group-label" style="margin:26px 0 0">NOTIFICATIONS</div>
+        <div class="group" style="margin:12px 0 0;padding:14px">
+          <div class="dev-note" style="margin:0 0 12px">Each fires in 3 seconds, so you can background the app and see it land.</div>
+          <div class="dev-chips">
+            ${SwornDev.NOTIF_KINDS.map(([kind, label]) => `
+              <button type="button" class="dev-chip" data-act="dev-notif" data-kind="${kind}">${esc(label)}</button>`).join('')}
+          </div>
+          <div class="dev-chips" style="margin-top:14px">
+            <button type="button" class="dev-chip" data-act="dev-notif-list">What's scheduled</button>
+            <button type="button" class="dev-chip" data-act="dev-notif-clear">Cancel all</button>
+          </div>
+          ${(() => {
+            const list = SwornDev.getScheduled();
+            if (!list.length) return '';
+            return `<div class="dev-note" style="margin-top:14px">${list.length} pending</div>` +
+              list.map((n) => `<div class="dev-note" style="margin-top:6px">${esc(n.when)} · ${esc(n.title)}</div>`).join('');
+          })()}
         </div>
 
         <div class="group-label" style="margin:26px 0 0">TEST BEHAVIOR</div>
@@ -1600,6 +1672,7 @@ document.getElementById('phone').addEventListener('click', (e) => {
       const d = S.draft;
       if (!d || !d.name.trim()) return;
       d.name = d.name.trim();
+      const wasNew = d.id === null;
       if (d.id === null) {
         d.id = nextOathId++;
         OATHS.push(d);
@@ -1611,7 +1684,9 @@ document.getElementById('phone').addEventListener('click', (e) => {
       S.sheetFrom = null;
       // Land on the list, where what you just made is visible.
       S.tab = 'commitments';
+      const isNew = wasNew;
       persistOaths();
+      if (isNew) bridge({ action: 'notifyRecommit', prefs: loadNotifPrefs() });
       return render();
     }
     case 'oath-break': {
@@ -1639,6 +1714,16 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'app': toggle(S.draft.apps, el.dataset.app); return render();
     case 'page-close': S.page = null; return render();
     case 'account': S.page = 'account'; return render();
+    case 'notifications-open': S.page = 'notifications'; return render();
+    case 'notif-toggle': {
+      const prefs = loadNotifPrefs();
+      const key = el.dataset.key;
+      prefs[key] = !prefs[key];
+      saveNotifPrefs(prefs);
+      // Preferences are part of the schedule, so changing one rebuilds it.
+      syncNotifications(oathPayload());
+      return render();
+    }
     case 'doc-support': S.page = 'support'; return render();
     case 'doc-terms': S.page = 'terms'; return render();
     case 'doc-privacy': S.page = 'privacy'; return render();
@@ -1655,6 +1740,9 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'dev-open': S.devOpen = true; return render();
     case 'dev-close': S.devOpen = false; return render();
     case 'dev-state': return SwornDev.apply(el.dataset.id);
+    case 'dev-notif': return SwornDev.fireNotif(el.dataset.kind);
+    case 'dev-notif-list': return SwornDev.listNotifs();
+    case 'dev-notif-clear': return SwornDev.clearNotifs();
     case 'dev-behavior': return SwornDev.setBehavior(el.dataset.id);
     case 'dev-duration': SwornDev.setDuration(Number(el.dataset.secs)); return render();
     case 'dev-stage':
@@ -1723,6 +1811,11 @@ document.addEventListener('visibilitychange', () => {
   }
   render();
 });
+
+/* Opening the app is engagement: it rebuilds the schedule, which pushes the
+   re-engagement and why reminders back so they only reach someone who has
+   genuinely gone quiet. */
+syncNotifications(oathPayload());
 
 if (DEV) SwornDev.runPending();
 
