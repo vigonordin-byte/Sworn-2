@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import WebKit
 import StoreKit
 import UserNotifications
@@ -187,6 +188,9 @@ struct WebView: UIViewRepresentable {
                     SyncEngine.shared.signOut()
                 #endif
 
+                case "haptic":
+                    Self.revealHaptic()
+
                 case "notify":
                     // The real permission prompt; iOS shows it once. There is
                     // nothing scheduled yet — this only secures the right to.
@@ -283,6 +287,20 @@ struct WebView: UIViewRepresentable {
             sheet.popoverPresentationController?.sourceRect = CGRect(
                 x: root.view.bounds.midX, y: root.view.bounds.midY, width: 0, height: 0)
             root.present(sheet, animated: true)
+        }
+
+        /* One soft tap as a phrase lands — the phone quietly writing the
+           words into the hand. The generator no-ops on devices without a
+           Taptic Engine and respects the system haptic settings, so there is
+           nothing to feature-gate. Rate-limited so bursts can never buzz. */
+        private static let revealGenerator = UIImpactFeedbackGenerator(style: .soft)
+        private static var lastReveal = Date.distantPast
+
+        @MainActor
+        private static func revealHaptic() {
+            guard Date().timeIntervalSince(lastReveal) > 0.08 else { return }
+            lastReveal = Date()
+            revealGenerator.impactOccurred(intensity: 0.45)
         }
 
         @MainActor

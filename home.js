@@ -557,33 +557,114 @@ function stageFor(elapsed) {
 }
 
 /** The stage body. Rendered only when the stage changes, so it can fade. */
+/* Supporting copy materializes word by word while the big statement lands at
+   once. The spans are presentation only: the full sentence sits in aria-label,
+   so assistive tech reads the thought whole, not word fragments. */
+function reveal(cls, text) {
+  const words = String(text).split(/\s+/).filter(Boolean);
+  return `<div class="${cls}" aria-label="${esc(text)}">${words
+    .map((w) => `<span class="rw" aria-hidden="true">${esc(w)}</span>`).join(' ')}</div>`;
+}
+
 function stageBody(stage) {
   switch (stage) {
     case 'interrupt':
       return `
         <div class="iv__wait">WAIT.</div>
-        <div class="iv__line">You made a commitment to yourself.</div>`;
+        ${reveal('iv__line', 'You made a commitment to yourself.')}`;
 
     case 'remember':
       return `
         <div class="iv__lead">Remember why you started.</div>
-        <div class="iv__quote">“${esc(whyText())}”</div>
+        ${reveal('iv__quote', '“' + whyText() + '”')}
         ${faithMode() ? `
         <div class="iv__verse">
-          <div class="iv__verse-text">${FAITH_VERSE[0]}</div>
-          <div class="iv__verse-ref">${FAITH_VERSE[1]}</div>
-        </div>` : ''}`;
+          ${reveal('iv__verse-text', FAITH_VERSE[0])}
+          ${reveal('iv__verse-ref', FAITH_VERSE[1])}
+        </div>` : ''}
+        ${reveal('iv__line', 'That reason still matters right now.')}`;
 
     case 'act':
       return `
         <div class="iv__lead">Don't sit here fighting it.</div>
-        <div class="iv__action">${esc(S.ivAction)}</div>`;
+        ${reveal('iv__action', S.ivAction)}`;
 
     default:
       return `
         <div class="iv__decide">${esc(B().interventionLine)}</div>
-        <div class="iv__decide iv__decide--soft">What do you want to choose?</div>`;
+        ${reveal('iv__decide iv__decide--soft', 'What do you want to choose?')}`;
   }
+}
+
+/* The reveal engine. Words are scheduled on the wall clock across their
+   stage's window, always finishing a few seconds before the stage ends — the
+   silence is part of the design. Backgrounding fast-forwards instead of
+   freezing, the countdown is never touched, and nothing here can be tapped
+   through. Haptics ride phrase boundaries, never characters, and are skipped
+   during catch-up bursts so a resume never buzzes. */
+const STAGE_BOUNDS = { interrupt: [0, 10], remember: [10, 30], act: [30, 50], decide: [50, Infinity] };
+let revealTick = null;
+
+function armReveal() {
+  clearInterval(revealTick);
+  const host = document.getElementById('ivstage');
+  if (!host || S.view !== 'running') return;
+  const words = [...host.querySelectorAll('.rw')];
+  if (!words.length) return;
+
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    words.forEach((w) => w.classList.add('on'));
+    return;
+  }
+
+  const total = S.interventionSeconds;
+  const elapsed = total - S.left;
+  const [rawStart, rawEnd] = STAGE_BOUNDS[stageFor(elapsed)];
+  const start = Math.min(rawStart, total);
+  const end = Math.min(rawEnd, total);
+  const window = Math.max(3, end - start);
+  const pause = Math.min(5, Math.max(2, window * 0.3));
+
+  const stageStartAt = S.ivEndsAt - (total - start) * 1000;
+  const lineGap = 500;
+  const lineCount = new Set(words.map((w) => w.parentElement)).size;
+  const available = Math.max(1200, (window - pause) * 1000 - (lineCount - 1) * lineGap - 600);
+  // Stretch to fill the window: one thought at a time, up to a slow 650ms a
+  // word, never faster than 70ms. The remainder is the reading silence.
+  const cadence = Math.min(800, Math.max(70, available / words.length));
+
+  let t = 600; // a beat after the big statement lands
+  let prevLine = null;
+  words.forEach((w) => {
+    if (prevLine && w.parentElement !== prevLine) t += lineGap;
+    prevLine = w.parentElement;
+    w.dataset.at = String(stageStartAt + t);
+    t += cadence;
+  });
+
+  let sinceHaptic = 0;
+  revealTick = setInterval(() => {
+    if (S.view !== 'running' || !document.getElementById('ivstage')) {
+      clearInterval(revealTick);
+      return;
+    }
+    const now = Date.now();
+    let shown = 0;
+    let pending = 0;
+    words.forEach((w) => {
+      if (w.classList.contains('on')) return;
+      if (Number(w.dataset.at) <= now) { w.classList.add('on'); shown += 1; }
+      else pending += 1;
+    });
+    if (shown) {
+      sinceHaptic += shown;
+      if (sinceHaptic >= 3 && shown <= 2) {
+        sinceHaptic = 0;
+        if (NATIVE) native({ action: 'haptic' });
+      }
+    }
+    if (!pending) clearInterval(revealTick);
+  }, 80);
 }
 
 /** The decision, revealed only once the countdown is spent. */
@@ -1265,6 +1346,7 @@ function render() {
     (S.tab === 'home' ? intervention() : '') +
     oathSheet() +
     achievements() + whyPage() + devPage() + settingsPage();
+  if (S.tab === 'home' && S.view === 'running') armReveal();
 }
 
 /* The clock is patched every second; the stage body is swapped only when the
@@ -1289,6 +1371,7 @@ function paintCount() {
     holder.classList.remove('is-in');
     void holder.offsetWidth;
     holder.classList.add('is-in');
+    armReveal();
   }
 
   if (S.left <= 0) document.getElementById('ivfoot').innerHTML = decisionBar();

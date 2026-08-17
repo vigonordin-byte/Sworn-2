@@ -1588,3 +1588,22 @@ body { font-family: var(--sf); }
 /* The home tab fits on one screen, but a scroller that cannot move at all
    feels frozen. One extra pixel keeps the native rubber-band alive. */
 .scroll__breathe { min-height: calc(100% + 1px); }
+
+/* ---------------------------------------------------------------- word reveal */
+
+/* Words hold their final position from the start (opacity only reflows
+   nothing), then materialize out of a slight blur. No cursor, no dots —
+   nothing that reads as typing. */
+.rw {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(5px);
+  filter: blur(5px);
+  transition: opacity .55s ease, transform .55s ease, filter .55s ease;
+  will-change: opacity, transform, filter;
+}
+.rw.on { opacity: 1; transform: none; filter: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rw { transition: none; transform: none; filter: none; }
+}
