@@ -3,6 +3,7 @@ import UIKit
 import WebKit
 import StoreKit
 import UserNotifications
+import CoreHaptics
 
 /// Hosts the bundled web UI and bridges it to Screen Time.
 ///
@@ -246,6 +247,8 @@ struct WebView: UIViewRepresentable {
             // Push anything queued, then hand the page whatever the server
             // holds. The web layer merges conservatively: streak dates only if
             // older, events unioned, oaths only into an empty list.
+            RevealHaptics.shared.prepare()
+
             Task { @MainActor in
                 await SyncEngine.shared.flush()
                 if let json = await SyncEngine.shared.pullAll() {
@@ -321,39 +324,111 @@ struct WebView: UIViewRepresentable {
     }
 }
 
-/* The text-reveal haptic session: a rapid stream of very soft pulses for
-   exactly as long as a line is materializing — the phone quietly writing the
-   words into the hand, not tapping per word. One bridge message starts a
-   session for the line's duration; ms <= 0 cancels; a new session replaces a
-   running one. UIImpactFeedbackGenerator no-ops where haptics are disabled
-   or unavailable, so there is nothing to feature-gate. */
+/* The text-reveal haptic session: the phone writing the words into the hand.
+
+   Core Haptics does the real work, because a run of discrete taps can only
+   ever feel like taps. One continuous event carries the whole line with an
+   intensity curve that swells in and fades out, and a train of sharp
+   transients rides on top of it so the writing has texture rather than a flat
+   buzz. Devices without a Taptic Engine, or with haptics switched off, fall
+   back to soft impacts, and both paths simply do nothing when unavailable —
+   there is nothing to feature-gate. */
 @MainActor
 final class RevealHaptics {
     static let shared = RevealHaptics()
 
-    private let generator = UIImpactFeedbackGenerator(style: .soft)
-    private var timer: Timer?
-    private var endsAt = Date.distantPast
+    private var engine: CHHapticEngine?
+    private var player: CHHapticPatternPlayer?
+    private var fallbackTimer: Timer?
+    private var fallbackEndsAt = Date.distantPast
+    private let fallbackGenerator = UIImpactFeedbackGenerator(style: .medium)
+
+    private var supported: Bool { CHHapticEngine.capabilitiesForHardware().supportsHaptics }
+
+    /// Warmed at launch so the first line does not pay the start-up cost.
+    func prepare() {
+        guard supported, engine == nil else { return }
+        engine = try? CHHapticEngine()
+        // The system stops the engine when the app backgrounds; restart lazily
+        // rather than holding it running.
+        engine?.stoppedHandler = { [weak self] _ in Task { @MainActor in self?.engine = nil } }
+        engine?.resetHandler = { [weak self] in Task { @MainActor in try? self?.engine?.start() } }
+        try? engine?.start()
+    }
 
     func run(ms: Double) {
         stop()
         guard ms > 120 else { return }
-        endsAt = Date().addingTimeInterval(ms / 1000)
-        generator.prepare()
-        let timer = Timer(timeInterval: 0.075, repeats: true) { [weak self] t in
-            Task { @MainActor in
-                guard let self else { t.invalidate(); return }
-                guard Date() < self.endsAt else { self.stop(); return }
-                self.generator.impactOccurred(intensity: 0.4)
-                self.generator.prepare()
-            }
+        let duration = min(ms / 1000, 8)
+
+        guard supported else { return runFallback(duration: duration) }
+        prepare()
+        guard let engine else { return runFallback(duration: duration) }
+
+        // The bed: a continuous vibration that swells in and eases out.
+        let bed = CHHapticEvent(
+            eventType: .hapticContinuous,
+            parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.65),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.35)
+            ],
+            relativeTime: 0,
+            duration: duration
+        )
+        let curve = CHHapticParameterCurve(
+            parameterID: .hapticIntensityControl,
+            controlPoints: [
+                .init(relativeTime: 0, value: 0.15),
+                .init(relativeTime: 0.12, value: 1.0),
+                .init(relativeTime: max(0.2, duration - 0.25), value: 1.0),
+                .init(relativeTime: duration, value: 0)
+            ],
+            relativeTime: 0
+        )
+
+        // The texture: fine transients across the bed, like nib on paper.
+        var events: [CHHapticEvent] = [bed]
+        var t = 0.04
+        while t < duration - 0.05 {
+            events.append(CHHapticEvent(
+                eventType: .hapticTransient,
+                parameters: [
+                    CHHapticEventParameter(parameterID: .hapticIntensity, value: 0.5),
+                    CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.6)
+                ],
+                relativeTime: t
+            ))
+            t += 0.055
         }
-        RunLoop.main.add(timer, forMode: .common)
-        self.timer = timer
+
+        guard let pattern = try? CHHapticPattern(events: events, parameterCurves: [curve]),
+              let player = try? engine.makePlayer(with: pattern) else {
+            return runFallback(duration: duration)
+        }
+        self.player = player
+        try? player.start(atTime: CHHapticTimeImmediate)
     }
 
     func stop() {
-        timer?.invalidate()
-        timer = nil
+        try? player?.stop(atTime: CHHapticTimeImmediate)
+        player = nil
+        fallbackTimer?.invalidate()
+        fallbackTimer = nil
+    }
+
+    /// No Taptic Engine: the best available approximation.
+    private func runFallback(duration: Double) {
+        fallbackEndsAt = Date().addingTimeInterval(duration)
+        fallbackGenerator.prepare()
+        let timer = Timer(timeInterval: 0.06, repeats: true) { [weak self] t in
+            Task { @MainActor in
+                guard let self else { t.invalidate(); return }
+                guard Date() < self.fallbackEndsAt else { self.stop(); return }
+                self.fallbackGenerator.impactOccurred(intensity: 0.85)
+                self.fallbackGenerator.prepare()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        fallbackTimer = timer
     }
 }
