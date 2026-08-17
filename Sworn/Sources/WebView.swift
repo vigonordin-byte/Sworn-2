@@ -189,7 +189,7 @@ struct WebView: UIViewRepresentable {
                 #endif
 
                 case "haptic":
-                    Self.revealHaptic()
+                    RevealHaptics.shared.run(ms: body["ms"] as? Double ?? 0)
 
                 case "notify":
                     // The real permission prompt; iOS shows it once. There is
@@ -289,20 +289,6 @@ struct WebView: UIViewRepresentable {
             root.present(sheet, animated: true)
         }
 
-        /* One soft tap as a phrase lands — the phone quietly writing the
-           words into the hand. The generator no-ops on devices without a
-           Taptic Engine and respects the system haptic settings, so there is
-           nothing to feature-gate. Rate-limited so bursts can never buzz. */
-        private static let revealGenerator = UIImpactFeedbackGenerator(style: .soft)
-        private static var lastReveal = Date.distantPast
-
-        @MainActor
-        private static func revealHaptic() {
-            guard Date().timeIntervalSince(lastReveal) > 0.08 else { return }
-            lastReveal = Date()
-            revealGenerator.impactOccurred(intensity: 0.45)
-        }
-
         @MainActor
         private static func activeScene() -> UIWindowScene? {
             UIApplication.shared.connectedScenes
@@ -332,5 +318,42 @@ struct WebView: UIViewRepresentable {
             else { return [] }
             return specs
         }
+    }
+}
+
+/* The text-reveal haptic session: a rapid stream of very soft pulses for
+   exactly as long as a line is materializing — the phone quietly writing the
+   words into the hand, not tapping per word. One bridge message starts a
+   session for the line's duration; ms <= 0 cancels; a new session replaces a
+   running one. UIImpactFeedbackGenerator no-ops where haptics are disabled
+   or unavailable, so there is nothing to feature-gate. */
+@MainActor
+final class RevealHaptics {
+    static let shared = RevealHaptics()
+
+    private let generator = UIImpactFeedbackGenerator(style: .soft)
+    private var timer: Timer?
+    private var endsAt = Date.distantPast
+
+    func run(ms: Double) {
+        stop()
+        guard ms > 120 else { return }
+        endsAt = Date().addingTimeInterval(ms / 1000)
+        generator.prepare()
+        let timer = Timer(timeInterval: 0.075, repeats: true) { [weak self] t in
+            Task { @MainActor in
+                guard let self else { t.invalidate(); return }
+                guard Date() < self.endsAt else { self.stop(); return }
+                self.generator.impactOccurred(intensity: 0.4)
+                self.generator.prepare()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+
+    func stop() {
+        timer?.invalidate()
+        timer = nil
     }
 }

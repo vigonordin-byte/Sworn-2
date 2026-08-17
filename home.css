@@ -1591,19 +1591,19 @@ body { font-family: var(--sf); }
 
 /* ---------------------------------------------------------------- word reveal */
 
-/* Words hold their final position from the start (opacity only reflows
-   nothing), then materialize out of a slight blur. No cursor, no dots —
-   nothing that reads as typing. */
-.rw {
-  display: inline-block;
+/* A continuous writing flow: each character fades in over ~380ms while its
+   neighbours are already mid-fade, so the reveal reads as one smooth
+   wavefront, not steps. Opacity only — text holds its final layout from the
+   first frame and nothing ever jumps. Word wrappers keep line-wrapping from
+   splitting words. */
+.rww { display: inline-block; }
+
+.rc {
   opacity: 0;
-  transform: translateY(5px);
-  filter: blur(5px);
-  transition: opacity .55s ease, transform .55s ease, filter .55s ease;
-  will-change: opacity, transform, filter;
+  transition: opacity .38s ease;
 }
-.rw.on { opacity: 1; transform: none; filter: none; }
+.rc.on { opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
-  .rw { transition: none; transform: none; filter: none; }
+  .rc { transition: none; }
 }

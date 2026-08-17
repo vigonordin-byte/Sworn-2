@@ -557,13 +557,17 @@ function stageFor(elapsed) {
 }
 
 /** The stage body. Rendered only when the stage changes, so it can fade. */
-/* Supporting copy materializes word by word while the big statement lands at
-   once. The spans are presentation only: the full sentence sits in aria-label,
-   so assistive tech reads the thought whole, not word fragments. */
+/* Supporting copy is revealed as one continuous flow: every character fades
+   in over ~380ms while its neighbour starts milliseconds later, so the eye
+   reads a smooth wavefront writing across the line, never word-by-word
+   stepping. Words sit in unbreakable wrappers so wrapping cannot split a
+   word, and the whole sentence lives in aria-label; spans are presentation
+   only. */
 function reveal(cls, text) {
   const words = String(text).split(/\s+/).filter(Boolean);
-  return `<div class="${cls}" aria-label="${esc(text)}">${words
-    .map((w) => `<span class="rw" aria-hidden="true">${esc(w)}</span>`).join(' ')}</div>`;
+  const markup = words.map((w) => `<span class="rww">${[...w]
+    .map((c) => `<span class="rc">${esc(c)}</span>`).join('')}</span>`).join(' ');
+  return `<div class="${cls} rvl" aria-label="${esc(text)}"><span aria-hidden="true">${markup}</span></div>`;
 }
 
 function stageBody(stage) {
@@ -596,12 +600,16 @@ function stageBody(stage) {
   }
 }
 
-/* The reveal engine. Words are scheduled on the wall clock across their
-   stage's window, always finishing a few seconds before the stage ends — the
-   silence is part of the design. Backgrounding fast-forwards instead of
-   freezing, the countdown is never touched, and nothing here can be tapped
-   through. Haptics ride phrase boundaries, never characters, and are skipped
-   during catch-up bursts so a resume never buzzes. */
+/* The reveal engine. Each line gets a continuous character schedule on the
+   wall clock: 1.6 to 4 seconds per line depending on length, characters
+   overlapping so the flow never steps. Every stage finishes with quiet time
+   to spare, backgrounding fast-forwards instead of freezing, the countdown
+   is never touched, and nothing can be tapped through.
+
+   Haptics are a native session rather than per-word bridge spam: as a line
+   starts revealing, one message asks the host to run a stream of very soft
+   pulses for exactly that line's duration, so the phone is quietly writing
+   the words into the hand. Catch-up after a resume sends nothing. */
 const STAGE_BOUNDS = { interrupt: [0, 10], remember: [10, 30], act: [30, 50], decide: [50, Infinity] };
 let revealTick = null;
 
@@ -609,63 +617,74 @@ function armReveal() {
   clearInterval(revealTick);
   const host = document.getElementById('ivstage');
   if (!host || S.view !== 'running') return;
-  const words = [...host.querySelectorAll('.rw')];
-  if (!words.length) return;
+  const lines = [...host.querySelectorAll('.rvl')]
+    .map((el) => ({ el, chars: [...el.querySelectorAll('.rc')] }))
+    .filter((line) => line.chars.length);
+  if (!lines.length) return;
 
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    words.forEach((w) => w.classList.add('on'));
+    lines.forEach((line) => line.chars.forEach((c) => c.classList.add('on')));
     return;
   }
 
   const total = S.interventionSeconds;
   const elapsed = total - S.left;
   const [rawStart, rawEnd] = STAGE_BOUNDS[stageFor(elapsed)];
-  const start = Math.min(rawStart, total);
-  const end = Math.min(rawEnd, total);
-  const window = Math.max(3, end - start);
-  const pause = Math.min(5, Math.max(2, window * 0.3));
+  const stageStartAt = S.ivEndsAt - (total - Math.min(rawStart, total)) * 1000;
+  const stageEndAt = S.ivEndsAt - (total - Math.min(rawEnd, total)) * 1000;
 
-  const stageStartAt = S.ivEndsAt - (total - start) * 1000;
-  const lineGap = 500;
-  const lineCount = new Set(words.map((w) => w.parentElement)).size;
-  const available = Math.max(1200, (window - pause) * 1000 - (lineCount - 1) * lineGap - 600);
-  // Stretch to fill the window: one thought at a time, up to a slow 650ms a
-  // word, never faster than 70ms. The remainder is the reading silence.
-  const cadence = Math.min(800, Math.max(70, available / words.length));
+  const FADE = 380;
+  const LINE_GAP = 300;
+  const LEAD_IN = 450;
 
-  let t = 600; // a beat after the big statement lands
-  let prevLine = null;
-  words.forEach((w) => {
-    if (prevLine && w.parentElement !== prevLine) t += lineGap;
-    prevLine = w.parentElement;
-    w.dataset.at = String(stageStartAt + t);
-    t += cadence;
+  /* Each line at its natural pace, compressed only when the stage is too
+     short to hold it with at least 1.5s of reading silence at the end. */
+  let plan = lines.map((line) => Math.min(4000, Math.max(2000, line.chars.length * 55)));
+  const gaps = LEAD_IN + LINE_GAP * (lines.length - 1);
+  const planned = plan.reduce((a, b) => a + b, 0) + gaps;
+  const available = (stageEndAt - stageStartAt) - 1500;
+  if (planned > available) {
+    const scale = Math.max(0.2, (available - gaps) / (planned - gaps));
+    plan = plan.map((d) => d * scale);
+  }
+
+  let cursor = stageStartAt + LEAD_IN;
+  lines.forEach((line, i) => {
+    // Capped so even a short line keeps a continuous wavefront: with a 380ms
+    // fade, 65ms apart means ~6 characters are always mid-fade together.
+    const stagger = Math.min(65, Math.max(4, (plan[i] - FADE) / line.chars.length));
+    line.startAt = cursor;
+    line.chars.forEach((c, ci) => { c.dataset.at = String(cursor + ci * stagger); });
+    line.endAt = cursor + line.chars.length * stagger + FADE;
+    line.hapticSent = false;
+    cursor = line.endAt + LINE_GAP;
   });
 
-  let sinceHaptic = 0;
   revealTick = setInterval(() => {
     if (S.view !== 'running' || !document.getElementById('ivstage')) {
       clearInterval(revealTick);
+      if (NATIVE) native({ action: 'haptic', ms: 0 });
       return;
     }
     const now = Date.now();
-    let shown = 0;
     let pending = 0;
-    words.forEach((w) => {
-      if (w.classList.contains('on')) return;
-      if (Number(w.dataset.at) <= now) { w.classList.add('on'); shown += 1; }
-      else pending += 1;
-    });
-    if (shown) {
-      sinceHaptic += shown;
-      if (sinceHaptic >= 3 && shown <= 2) {
-        sinceHaptic = 0;
-        if (NATIVE) native({ action: 'haptic' });
+    lines.forEach((line) => {
+      if (!line.hapticSent && line.startAt <= now) {
+        line.hapticSent = true;
+        const remaining = line.endAt - now;
+        // catching up after a resume reveals at once and buzzes nothing
+        if (NATIVE && remaining > 300) native({ action: 'haptic', ms: remaining });
       }
-    }
+      line.chars.forEach((c) => {
+        if (c.classList.contains('on')) return;
+        if (Number(c.dataset.at) <= now) c.classList.add('on');
+        else pending += 1;
+      });
+    });
     if (!pending) clearInterval(revealTick);
-  }, 80);
+  }, 40);
 }
+
 
 /** The decision, revealed only once the countdown is spent. */
 function decisionBar() {
@@ -1411,6 +1430,8 @@ function startIntervention(mode, oathId) {
 
 function endIntervention() {
   clearInterval(timer);
+  clearInterval(revealTick);
+  if (NATIVE) native({ action: 'haptic', ms: 0 });
   S.view = 'home';
   S.ivMode = null;
   S.ivOathId = null;
