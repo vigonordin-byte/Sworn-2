@@ -294,6 +294,13 @@ function shieldCount(oath) {
 
 /** Hand the device the current schedule. Every change routes through here. */
 function syncShields() {
+  /* A running urge shield covers the union of every selection. Once the last
+     one is gone it protects nothing, so it must not keep claiming to — the
+     native side lowers it on the same condition. */
+  if (!anythingShielded() && urgeRemaining() > 0) {
+    endUrge();
+    if (NATIVE) native({ action: 'urgeClear' });
+  }
   if (!NATIVE) return;
   native({
     action: 'sync',
@@ -306,7 +313,7 @@ function syncShields() {
 /* Three states, in order of urgency: an urge shield running now, a scheduled
    window armed for later, or nothing set up yet. */
 function protectionCard() {
-  const left = urgeRemaining();
+  const left = anythingShielded() ? urgeRemaining() : 0;
 
   if (left > 0) {
     const total = URGE_MINUTES * 60_000;
@@ -426,9 +433,18 @@ function homeTab() {
         </button>
       </div>
 
+      ${(() => {
+        /* Nothing to block means nothing to activate. Offering the button
+           here would either lie about raising protection or waste the one
+           moment the user actually reached for help. */
+        const armed = anythingShielded();
+        return `
       <div style="position:relative;margin:14px 20px 0">
-        <button type="button" class="tempted" data-act="tempted">I'm tempted</button>
-      </div>
+        <button type="button" class="tempted${armed ? '' : ' tempted--off'}"
+          ${armed ? 'data-act="tempted"' : 'disabled aria-disabled="true"'}>I'm tempted</button>
+        ${armed ? '' : '<div class="tempted__note">Add protection first. Sworn has nothing to block yet.</div>'}
+      </div>`;
+      })()}
       <div style="height:12px"></div>
       </div>
     </div>`;
@@ -1460,6 +1476,7 @@ function paintCount() {
 /* The urge shield goes up first — before any countdown — so protection does
    not depend on the user sitting through anything. */
 function tapTempted() {
+  if (!anythingShielded()) return;
   clearInterval(timer);
   S.tab = 'home';
   beginUrge(URGE_MINUTES);

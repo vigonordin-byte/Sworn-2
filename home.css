@@ -477,6 +477,23 @@ body { font-family: var(--sf); }
 .tempted:hover { filter: brightness(1.06); }
 .tempted:active { transform: translateY(1px); }
 
+/* Nothing is protected, so there is nothing to activate. */
+.tempted--off {
+  background: rgba(255, 255, 255, .07);
+  color: rgba(242, 240, 236, .35);
+  cursor: default;
+}
+.tempted--off:hover { filter: none; }
+.tempted--off:active { transform: none; }
+
+.tempted__note {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: rgba(242, 240, 236, .38);
+}
+
 /* why sheet */
 
 .why-scrim {
