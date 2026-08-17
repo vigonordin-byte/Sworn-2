@@ -66,11 +66,50 @@ enum Shared {
         ManagedSettingsStore(named: ManagedSettingsStore.Name("oath\(oathId)"))
     }
 
+    /* Every shield store that has ever been created, kept durably.
+
+       A ManagedSettingsStore outlives the app that made it: shields persist
+       across launches, reinstalls of the schedule, and process death, and
+       there is no API to enumerate them. Without this registry the only
+       record of a store was its selection key — which deletion removed — so
+       a shield could be left raised with nothing left that knew to lower it.
+       Everything that clears shields now sweeps from here. */
+    private static let registryKey = "oath.ids"
+
+    static var knownOathIds: [Int] {
+        let stored = defaults.array(forKey: registryKey) as? [Int] ?? []
+        // Selection keys are a second source of truth for anything written by
+        // an older build that predates the registry.
+        let legacy = defaults.dictionaryRepresentation().keys
+            .filter { $0.hasPrefix("selection.") }
+            .compactMap { Int($0.dropFirst("selection.".count)) }
+        return Array(Set(stored).union(legacy)).sorted()
+    }
+
+    static func registerOath(_ oathId: Int) {
+        var ids = Set(defaults.array(forKey: registryKey) as? [Int] ?? [])
+        guard ids.insert(oathId).inserted else { return }
+        defaults.set(Array(ids).sorted(), forKey: registryKey)
+    }
+
+    static func deregisterOath(_ oathId: Int) {
+        let ids = (defaults.array(forKey: registryKey) as? [Int] ?? []).filter { $0 != oathId }
+        defaults.set(ids, forKey: registryKey)
+    }
+
+    /// Lower every shield this app can raise. The escape hatch: after this
+    /// nothing Sworn controls is blocked, whatever state it was left in.
+    static func clearAllShields() {
+        for id in knownOathIds { store(id).clearAllSettings() }
+        clearUrgeShield()
+    }
+
     // MARK: per-oath data
 
     static func saveSelection(_ selection: FamilyActivitySelection, for oathId: Int) {
         guard let data = try? JSONEncoder().encode(selection) else { return }
         defaults.set(data, forKey: "selection.\(oathId)")
+        registerOath(oathId)
     }
 
     static func selection(for oathId: Int) -> FamilyActivitySelection? {
@@ -116,18 +155,21 @@ enum Shared {
     #if DEBUG
     /// Developer reset: every key this app owns, plus any shield left standing.
     static func wipeAll() {
-        clearUrgeShield()
+        // Clear the shields BEFORE the keys that identify them.
+        clearAllShields()
         for key in defaults.dictionaryRepresentation().keys
         where key.hasPrefix("selection.") || key.hasPrefix("days.")
-           || key.hasPrefix("auth.") || key.hasPrefix("app.") {
+           || key.hasPrefix("auth.") || key.hasPrefix("app.")
+           || key == "oath.ids" {
             defaults.removeObject(forKey: key)
         }
     }
     #endif
 
     static func forget(oathId: Int) {
+        store(oathId).clearAllSettings()
         defaults.removeObject(forKey: "selection.\(oathId)")
         defaults.removeObject(forKey: "days.\(oathId)")
-        store(oathId).clearAllSettings()
+        deregisterOath(oathId)
     }
 }

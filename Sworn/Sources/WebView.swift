@@ -213,6 +213,9 @@ struct WebView: UIViewRepresentable {
                 case "forget":
                     if let id = body["oathId"] as? Int { self.screenTime.forget(oathId: id) }
 
+                case "liftAll":
+                    self.screenTime.liftAllBlocking()
+
                 default:
                     break
                 }

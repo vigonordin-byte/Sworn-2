@@ -81,12 +81,25 @@ final class ScreenTime: ObservableObject {
         let oathActivities = center.activities.filter { $0.rawValue != Shared.urgeActivity }
         if !oathActivities.isEmpty { center.stopMonitoring(oathActivities) }
 
-        // An oath that is off must not leave a stale shield behind.
-        for oath in oaths where !oath.on {
-            Shared.store(oath.id).clearAllSettings()
+        /* Any shield we know about that this list does not justify comes
+           down. That covers commitments switched off and, critically, ones
+           deleted entirely: a deleted oath is simply absent here, so without
+           sweeping the registry its shield had nothing left to lower it. */
+        let live = Set(oaths.filter { $0.on }.map { $0.id })
+        for id in Shared.knownOathIds where !live.contains(id) {
+            Shared.store(id).clearAllSettings()
+        }
+
+        // An urge shield blocks the union of every selection. Once the last
+        // one is gone there is nothing left for it to legitimately block.
+        let covered = Shared.urgeSelection()
+        if covered.applicationTokens.isEmpty && covered.categoryTokens.isEmpty
+            && covered.webDomainTokens.isEmpty {
+            lowerUrgeShield()
         }
 
         for oath in oaths where oath.on {
+            Shared.registerOath(oath.id)
             Shared.saveDays(oath.days, for: oath.id)
 
             guard
@@ -154,11 +167,21 @@ final class ScreenTime: ObservableObject {
     /// Developer reset: unschedule everything and drop every shield.
     func resetAll() {
         center.stopMonitoring()
-        for oath in oaths { Shared.store(oath.id).clearAllSettings() }
-        Shared.clearUrgeShield()
+        Shared.clearAllShields()
         oaths = []
     }
     #endif
+
+    /// Lift everything, now. Stops every schedule this app owns and lowers
+    /// every shield in the registry, so a user can never be left blocked by
+    /// state the UI no longer shows.
+    func liftAllBlocking() {
+        let ours = center.activities.filter {
+            $0.rawValue == Shared.urgeActivity || Shared.oathId(from: $0.rawValue) != nil
+        }
+        if !ours.isEmpty { center.stopMonitoring(ours) }
+        Shared.clearAllShields()
+    }
 
     func forget(oathId: Int) {
         center.stopMonitoring([DeviceActivityName(Shared.activityName(oathId))])

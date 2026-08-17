@@ -110,6 +110,7 @@ const PLUS = '<path d="M12 5.5v13M5.5 12h13"/>';
 const WRENCH = '<path d="M14.7 6.3a4 4 0 0 1-5.3 5.3L5 16v3h3l4.4-4.4a4 4 0 0 1 5.3-5.3l-2.3 2.3-1.4-1.4z"/>';
 const CARD = '<rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M3 10.5h18"/>';
 const REPLAY = '<path d="M3.5 12a8.5 8.5 0 1 1 2.6 6.1"/><path d="M3.5 19v-5h5"/>';
+const SHIELD_OFF = '<path d="M12 3.2 19 6v5.8c0 4.4-2.9 7.4-7 9-4.1-1.6-7-4.6-7-9V6z"/><path d="M4 4l16 16"/>';
 const SHIELD_CHECK = '<path d="M12 3.2 19 6v5.8c0 4.4-2.9 7.4-7 9-4.1-1.6-7-4.6-7-9V6z"/><path d="M9 12.1l2.3 2.3 4.2-4.5"/>';
 
 const DIM = 'rgba(242,240,236,.55)';
@@ -1119,6 +1120,12 @@ function settingsTab() {
       <div class="group-label">THE COMMITMENT</div>
       <div class="group">
         ${settingsRow(LOCK, 'Protected apps', oathAppCount() + ' blocked', 'apps-under-oath')}
+        ${S.confirmLift
+          ? `<button type="button" class="row dev-row--danger" data-act="lift-all">
+              <span class="row__left">${svg(SHIELD_OFF, 20, '#e88178')}<span class="row__name" style="color:#e88178">Tap again to lift everything</span></span>
+              <span class="row__value" style="color:#e88178">Unblocks all apps<span class="chev">›</span></span>
+            </button>`
+          : settingsRow(SHIELD_OFF, 'Lift all blocking now', '', 'lift-all')}
         ${settingsRow(MOON, 'Default locked window', `${win.from} – ${win.to}`, 'window-open')}
       </div>
 
@@ -1473,6 +1480,7 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'tab':
       if (S.view !== 'home') { clearInterval(timer); S.view = 'home'; }
       S.confirmReplay = false;
+      S.confirmLift = false;
       S.tab = el.dataset.tab;
       return render();
     case 'tempted': return tapTempted();
@@ -1616,6 +1624,18 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'dev-stage':
       S.devOpen = false;
       return SwornDev.jumpTo(Number(el.dataset.left));
+    case 'lift-all': {
+      /* The escape hatch. A shield outliving its commitment would be the
+         worst way for this app to fail, so there is always a way out that
+         does not depend on the rest of the UI being right. */
+      if (!S.confirmLift) { S.confirmLift = true; return render(); }
+      S.confirmLift = false;
+      OATHS.forEach((o) => { o.on = false; });
+      persistOaths();
+      if (NATIVE) native({ action: 'liftAll' });
+      endUrge();
+      return render();
+    }
     case 'replay-onboarding':
       // Replaying wipes the written why and every choice the moment the
       // onboarding page loads, so it must never fire on a stray tap.
