@@ -190,12 +190,15 @@ function startStreak() {
 
 const OATHS_KEY = 'sworn.oaths';
 
+/* Returns null only when nothing has ever been saved. An empty array is a
+   real answer — the user deleted everything — and must not read as "no
+   record", or their commitments come back from the dead. */
 function loadOaths() {
   try {
     const raw = localStorage.getItem(OATHS_KEY);
     if (raw) {
       const list = JSON.parse(raw);
-      if (Array.isArray(list) && list.length) return list;
+      if (Array.isArray(list)) return list;
     }
   } catch (e) {
     // storage blocked
@@ -246,13 +249,17 @@ function saveProtect(p) {
 }
 
 /** Mirror the onboarding window into the oath list the app reads. */
+/* Inside the app, apps are chosen through Apple's picker and are counted
+   natively, never named here — so p.apps is legitimately empty and gating on
+   it meant the commitment the user just built was never created. Days and a
+   window are the real signal that they set something up. */
 function seedFirstOath(p) {
-  if (!p.apps.length) return;
+  if (!p.days.length) return;
   const existing = loadOaths() || [];
   const first = existing.find((o) => o.id === 1) || { id: 1, friction: 1, on: true };
   const oath = {
     ...first,
-    name: `Protected ${p.from}–${p.to}`,
+    name: first.name || `Protected ${p.from}–${p.to}`,
     time: p.from,
     until: p.to,
     days: p.days,

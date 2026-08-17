@@ -22,15 +22,10 @@ const TIER_COPY = [
   'A hundred days is no longer a streak, it is how you live. Eternal is the last tier because there is nothing beyond it to chase: the commitment has become ordinary, and that is the whole point.'
 ];
 
-/* Day indices are 0 = Sunday, matching NIGHT_LABELS below.
-   Onboarding writes the first one; after that the Commitments page owns them. */
-const DEFAULT_OATHS = [
-  { id: 1, name: 'No Reddit after 20:00', time: '20:00', until: '06:00', days: [0, 1, 2, 3, 4, 5, 6], apps: ['Reddit'], friction: 1, on: true },
-  { id: 2, name: 'Phone out of the bedroom', time: '22:30', until: '07:00', days: [0, 1, 2, 3, 4], apps: ['Reddit', 'X', 'Instagram', 'TikTok'], friction: 1, on: false },
-  { id: 3, name: 'No socials before work', time: '06:30', until: '09:00', days: [1, 2, 3, 4, 5], apps: ['Instagram', 'TikTok', 'X'], friction: 0, on: false }
-];
-
-let OATHS = loadOaths() || DEFAULT_OATHS;
+/* Whatever the user actually has, and nothing else. This used to fall back
+   to three sample commitments from the design import, so a brand-new user met
+   "No Reddit after 20:00" and two others they never created. */
+let OATHS = loadOaths() || [];
 let nextOathId = OATHS.reduce((n, o) => Math.max(n, o.id), 0) + 1;
 
 /** Every mutation goes through here so storage and the device stay in step. */
@@ -946,10 +941,7 @@ function commitmentsTab() {
   return `
     <div class="scroll" style="top:var(--safe-top);bottom:var(--nav-h);padding:0">
       <div style="position:relative;padding:24px 24px 0">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-          <div class="page-title">COMMITMENTS</div>
-          <button type="button" class="round-btn" data-act="sheet-new" aria-label="New commitment">${svg(PLUS, 19, DIM, 2.1)}</button>
-        </div>
+        <div class="page-title">COMMITMENTS</div>
       </div>
 
       <div class="card card--static nextlock">
@@ -982,8 +974,11 @@ function commitmentsTab() {
         </div>`).join('')}
 
       ${OATHS.length ? '' : '<div class="empty">No commitments yet. Tap + to create one.</div>'}
-      <div style="height:34px"></div>
-    </div>`;
+      <div style="height:96px"></div>
+    </div>
+    <button type="button" class="fab" data-act="sheet-new" aria-label="New commitment">
+      ${svg(PLUS, 30, '#0a0a0b', 2.6)}
+    </button>`;
 }
 
 /* ---- the oath sheet -------------------------------------------------------

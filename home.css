@@ -1627,3 +1627,27 @@ body { font-family: var(--sf); }
   transition: color .2s ease, border-color .2s ease;
 }
 .iv__stay:hover { color: var(--ink); border-color: rgba(255, 255, 255, .24); }
+
+/* New commitment. Bottom right, where a thumb lands, and clear of the tab
+   bar rather than tucked into the header. */
+.fab {
+  position: absolute;
+  right: 20px;
+  bottom: calc(var(--nav-h) + 18px);
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f2f0ec;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .55), 0 2px 6px rgba(0, 0, 0, .4);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: transform .16s ease, filter .16s ease;
+}
+.fab:hover { filter: brightness(1.06); }
+.fab:active { transform: scale(.94); }
