@@ -8,7 +8,7 @@
 /* Behaviour-specific content lives in behavior.js. */
 const quiz = () => B().quiz;
 
-const CALC_NOTES = ['Understanding responses', 'Weighing your triggers', 'Shaping your oath'];
+const CALC_NOTES = ['Understanding responses', 'Weighing your triggers', 'Shaping your commitment'];
 
 
 

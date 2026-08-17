@@ -15,11 +15,11 @@ const TIERS = [
 ];
 
 const TIER_COPY = [
-  'Bronze is where every oath starts. The first days are the loudest, when urges arrive without warning and your own reasoning turns against you. Nothing is expected of you here except that you keep showing up.',
+  'Bronze is where every commitment starts. The first days are the loudest, when urges arrive without warning and your own reasoning turns against you. Nothing is expected of you here except that you keep showing up.',
   'By five days the noise begins to settle. Sleep improves, focus returns in short stretches, and the urge stops feeling like an emergency. Silver marks the point where the habit is no longer running the day.',
   'Ten days is where most attempts have already ended. Gold is earned by the ordinary work of keeping your locks in place and answering honestly at your checkup. Confidence stops being a feeling and becomes evidence.',
   'A month changes the baseline. Diamond means the reward circuits have had real time to recalibrate. Energy, drive and attention return to something closer to their natural level, and giving in becomes a decision rather than a reflex.',
-  'A hundred days is no longer a streak, it is how you live. Eternal is the last tier because there is nothing beyond it to chase: the oath has become ordinary, and that is the whole point.'
+  'A hundred days is no longer a streak, it is how you live. Eternal is the last tier because there is nothing beyond it to chase: the commitment has become ordinary, and that is the whole point.'
 ];
 
 /* Day indices are 0 = Sunday, matching NIGHT_LABELS below.
@@ -45,7 +45,7 @@ const APP_LIST = ['Reddit', 'X', 'Instagram', 'TikTok', 'YouTube', 'Safari'];
 const FRICTION_LEVELS = [
   ['GENTLE', 'A reminder and a pause. You can still continue.'],
   ['STRICT', 'Blocked. Unlocking takes 60 seconds and a written reason.'],
-  ['SEALED', 'Blocked with no override until the oath ends.']
+  ['SEALED', 'Blocked with no override until the commitment ends.']
 ];
 
 /* How many days back each range reaches; ALL is clamped to the oath date. */
@@ -459,7 +459,7 @@ function whyPage() {
       <div class="why-meta">${(() => {
         const oathAt = loadProgress().oathAt;
         const days = oathAt ? Math.max(0, Math.floor((Date.now() - oathAt) / 864e5)) : 0;
-        return `Written the night you took the oath, ${days} ${days === 1 ? 'day' : 'days'} ago.`;
+        return `Written when you made your commitment, ${days} ${days === 1 ? 'day' : 'days'} ago.`;
       })()}</div>
       <div class="why-rule"></div>
       <button type="button" class="pill-btn pill-btn--plain" data-act="why-edit">Edit my why</button>`;
@@ -520,7 +520,7 @@ function achievements() {
                 <div class="tl__name" style="color:${d.accent}">${d.name}</div>
                 ${i === cur ? '<div class="tl__now">NOW</div>' : t.earned ? '<div class="tl__now" style="color:#34c759;border-color:rgba(52,199,89,.4)">EARNED</div>' : ''}
               </div>
-              <div class="tl__req">${d.at === 0 ? 'From the day you swear' : d.at + ' days sworn'}</div>
+              <div class="tl__req">${d.at === 0 ? 'From the day you committed' : d.at + ' days kept'}</div>
               <div class="tl__copy"><b style="color:rgba(242,240,236,.86);font-weight:600">${esc(B().tierLines[i])}</b> ${esc(TIER_COPY[i])}</div>
             </div>
           </div>`;
@@ -679,7 +679,7 @@ function lapseScreen() {
       <div class="lapse__ask">${esc(B().failureLine)}</div>
       <textarea class="why-edit" id="lapsenote" placeholder="Optional. Only you ever see this."></textarea>
       <button type="button" class="cta-gold" style="margin-top:auto" data-act="again">START AGAIN</button>
-      <div class="lapse__foot">Your day counter starts again. Your oath, your history and your locks all stay.</div>
+      <div class="lapse__foot">Your day counter starts again. Your commitment, your history and your locks all stay.</div>
     </div>`;
 }
 
@@ -818,19 +818,19 @@ function commitmentsTab() {
       <div style="position:relative;padding:24px 24px 0">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
           <div class="page-title">COMMITMENTS</div>
-          <button type="button" class="round-btn" data-act="sheet-new" aria-label="New oath">${svg(PLUS, 19, DIM, 2.1)}</button>
+          <button type="button" class="round-btn" data-act="sheet-new" aria-label="New commitment">${svg(PLUS, 19, DIM, 2.1)}</button>
         </div>
       </div>
 
       <div class="card card--static nextlock">
         <div class="nextlock__eyebrow">NEXT LOCK</div>
         <div class="nextlock__time">${lock ? esc(lock.time) : '–'}</div>
-        <div style="margin-top:8px;text-align:center;font-size:13px;color:rgba(242,240,236,.5)">${lock ? esc(scheduleLabel(lock.days)) : 'No active oath'}</div>
+        <div style="margin-top:8px;text-align:center;font-size:13px;color:rgba(242,240,236,.5)">${lock ? esc(scheduleLabel(lock.days)) : 'No active commitment'}</div>
         <div class="nextlock__foot">
           ${svg(MOON, 22, DIM)}
           <div>
             <div style="font-size:13.5px;font-weight:600">${lock ? `${esc(selectionLabel(shieldBreakdown(lock)) || 'Nothing')} lock${shieldCount(lock) === 1 ? 's' : ''} at this time` : 'Nothing is locked'}</div>
-            <div style="margin-top:3px;font-size:12.5px;color:rgba(242,240,236,.45)">${lock ? esc(NATIVE ? `Locked until ${lock.until}` : (lock.apps.join(' · ') || 'No apps chosen')) : 'Turn an oath on to protect your apps'}</div>
+            <div style="margin-top:3px;font-size:12.5px;color:rgba(242,240,236,.45)">${lock ? esc(NATIVE ? `Locked until ${lock.until}` : (lock.apps.join(' · ') || 'No apps chosen')) : 'Turn a commitment on to protect your apps'}</div>
           </div>
         </div>
       </div>
@@ -851,7 +851,7 @@ function commitmentsTab() {
           </div>
         </div>`).join('')}
 
-      ${OATHS.length ? '' : '<div class="empty">No oaths yet. Tap + to swear one.</div>'}
+      ${OATHS.length ? '' : '<div class="empty">No commitments yet. Tap + to create one.</div>'}
       <div style="height:34px"></div>
     </div>`;
 }
@@ -882,15 +882,15 @@ function oathSheet() {
 
   return `
     <button type="button" class="scrim" data-act="sheet-cancel" aria-label="Close"></button>
-    <div class="sheet-full" role="dialog" aria-modal="true" aria-label="${editing ? 'Edit oath' : 'New oath'}">
+    <div class="sheet-full" role="dialog" aria-modal="true" aria-label="${editing ? 'Edit commitment' : 'New commitment'}">
       <div class="sheet__bar">
         <button type="button" class="sheet__cancel" data-act="sheet-cancel">Cancel</button>
-        <div class="sheet__title">${editing ? 'Edit oath' : 'New oath'}</div>
+        <div class="sheet__title">${editing ? 'Edit commitment' : 'New commitment'}</div>
         <div style="width:78px"></div>
       </div>
 
       <input class="sheet-input" style="margin-top:22px" id="oathname" data-field="name"
-        value="${esc(d.name)}" placeholder="Name this oath" autocomplete="off">
+        value="${esc(d.name)}" placeholder="Name your commitment" autocomplete="off">
 
       ${row('Locks at', d.time, 'time')}
       ${sec === 'time' ? `
@@ -918,7 +918,7 @@ function oathSheet() {
         <span class="row__left">${svg(LOCK, 19, DIM)}<span style="font-weight:600">App blocking</span></span>
         <span class="tile__value">${shieldCount(d) ? esc(selectionLabel(shieldBreakdown(d))) : 'None yet'}<span class="tile__chev">›</span></span>
       </button>
-      ${d.id === null ? '<div class="tile-note">Swear the oath first, then choose which apps it locks.</div>' : ''}
+      ${d.id === null ? '<div class="tile-note">Make your commitment first, then choose which apps to protect.</div>' : ''}
       ` : `
       ${row('App blocking', countLabel(d.apps.length), 'apps', LOCK)}
       ${sec === 'apps' ? `
@@ -949,10 +949,10 @@ function oathSheet() {
             </button>`).join('')}
         </div>` : ''}
 
-      ${editing ? '<button type="button" class="oath-break" data-act="oath-break">Break this oath</button>' : ''}
+      ${editing ? '<button type="button" class="oath-break" data-act="oath-break">Break this commitment</button>' : ''}
 
-      <button type="button" class="sheet-btn" data-act="sheet-save" id="oathsave"${ready ? '' : ' disabled'}>${editing ? 'SAVE CHANGES' : 'SWEAR IT'}</button>
-      <div style="margin-top:11px;text-align:center;font-size:11.5px;color:rgba(242,240,236,.32)">Breaking an oath early is recorded in your history.</div>
+      <button type="button" class="sheet-btn" data-act="sheet-save" id="oathsave"${ready ? '' : ' disabled'}>${editing ? 'SAVE CHANGES' : 'COMMIT'}</button>
+      <div style="margin-top:11px;text-align:center;font-size:11.5px;color:rgba(242,240,236,.32)">Breaking a commitment early is recorded in your history.</div>
       <div style="height:24px"></div>
     </div>`;
 }
@@ -987,9 +987,9 @@ function settingsTab() {
         <span class="chev">›</span>
       </button>
 
-      <div class="group-label">THE OATH</div>
+      <div class="group-label">THE COMMITMENT</div>
       <div class="group">
-        ${settingsRow(LOCK, 'Apps under oath', oathAppCount() + ' blocked', 'apps-under-oath')}
+        ${settingsRow(LOCK, 'Protected apps', oathAppCount() + ' blocked', 'apps-under-oath')}
         ${settingsRow(MOON, 'Default locked window', `${win.from} – ${win.to}`, 'window-open')}
       </div>
 
@@ -1059,7 +1059,7 @@ function accountPage() {
         <span class="row__value">Apple</span>
       </div>
       <div class="row row--static">
-        <span class="row__left"><span class="row__name">Days sworn</span></span>
+        <span class="row__left"><span class="row__name">Days kept</span></span>
         <span class="row__value">${S.daysSworn}</span>
       </div>
     </div>
@@ -1070,7 +1070,7 @@ function accountPage() {
 function windowPage() {
   const win = loadWindow();
   return pageShell('LOCKED WINDOW', `
-    <div class="doc-note" style="margin-top:0">The hours new oaths use by default. Changing it does not alter oaths you have already sworn.</div>
+    <div class="doc-note" style="margin-top:0">The hours new commitments use by default. Changing it does not alter commitments you have already made.</div>
     <div class="window-row" style="margin-top:18px">
       <label class="window-cell">
         <span class="window-cell__label">FROM</span>
@@ -1090,7 +1090,7 @@ const DOCS = {
     <p class="doc-strong">hello@sworn.app</p>
     <p>Include what you were doing and what happened. If it is about blocking, say which apps and which hours. That is almost always where the answer is.</p>
     <h3>Blocking is not working</h3>
-    <p>Sworn blocks apps using Apple's Screen Time. Two things have to be true: you granted Screen Time access when asked, and the oath has apps chosen and is switched on. You can check both under Commitments.</p>
+    <p>Sworn blocks apps using Apple's Screen Time. Two things have to be true: you granted Screen Time access when asked, and the commitment has apps chosen and is switched on. You can check both under Commitments.</p>
     <p>If you denied Screen Time access, iOS will not ask again. Turn it back on in Settings → Screen Time.</p>
     <h3>I want my data removed</h3>
     <p>Everything Sworn knows is on your device. Deleting the app deletes it. There is nothing on a server for us to remove.</p>
@@ -1117,7 +1117,7 @@ const DOCS = {
     <p class="doc-meta">Last updated 15 August 2026</p>
     <p>Sworn is built so that we do not need your data. Almost nothing leaves your phone.</p>
     <h3>Stays on your device</h3>
-    <p>Your reason for stopping, what it has cost you, your oaths, hours and streak are stored on this device. When you sign in with Apple, your commitment record and the timestamps of protection events sync to our server so a new phone can restore them. Notes you write after a lapse never leave this device.</p>
+    <p>Your reason for stopping, what it has cost you, your commitments, hours and streak are stored on this device. When you sign in with Apple, your commitment record and the timestamps of protection events sync to our server so a new phone can restore them. Notes you write after a lapse never leave this device.</p>
     <h3>Which apps you block</h3>
     <p>Apps are chosen through Apple's own picker. Apple hands Sworn an opaque token, not a name. Sworn can count how many apps you protect, and genuinely cannot tell which they are.</p>
     <h3>Sign in with Apple</h3>
