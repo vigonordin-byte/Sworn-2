@@ -270,24 +270,6 @@ function seedFirstOath(p) {
   saveOaths([oath, ...rest]);
 }
 
-/* The hours new oaths default to. Editable from Settings. */
-const WINDOW_KEY = 'sworn.window';
-
-function loadWindow() {
-  try {
-    const raw = localStorage.getItem(WINDOW_KEY);
-    if (raw) {
-      const w = JSON.parse(raw);
-      if (w && w.from && w.to) return { from: w.from, to: w.to };
-    }
-  } catch (e) { /* blocked */ }
-  return { from: '20:00', to: '06:00' };
-}
-
-function saveWindow(w) {
-  try { localStorage.setItem(WINDOW_KEY, JSON.stringify(w)); } catch (e) { /* blocked */ }
-}
-
 /** Everything Sworn holds, as plain text, for Export my record. */
 function exportRecord() {
   const why = loadWhy();

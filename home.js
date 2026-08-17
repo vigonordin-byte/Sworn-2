@@ -66,7 +66,7 @@ const S = {
   whyEditing: false,
   achievementsOpen: false,
   devOpen: false,
-  page: null,          // 'account' | 'window' | 'support' | 'terms' | 'privacy'
+  page: null,          // 'account' | 'support' | 'terms' | 'privacy'
   screenTimeAuthorized: false
 };
 
@@ -1067,8 +1067,7 @@ function commitmentsTab() {
 const countLabel = (n) => n + (n === 1 ? ' app' : ' apps');
 
 function blankOath() {
-  const w = loadWindow();
-  return { id: null, name: '', time: w.from, until: w.to, days: [0, 1, 2, 3, 4, 5, 6], apps: [], on: true };
+  return { id: null, name: '', time: '20:00', until: '06:00', days: [0, 1, 2, 3, 4, 5, 6], apps: [], on: true };
 }
 
 function oathSheet() {
@@ -1163,7 +1162,6 @@ function oathAppCount() {
 }
 
 function settingsTab() {
-  const win = loadWindow();
 
   return `
     <div class="scroll" style="top:var(--safe-top);bottom:var(--nav-h);padding:0">
@@ -1187,7 +1185,6 @@ function settingsTab() {
               <span class="row__value" style="color:#e88178">Unblocks all apps<span class="chev">›</span></span>
             </button>`
           : settingsRow(SHIELD_OFF, 'Lift all blocking now', '', 'lift-all')}
-        ${settingsRow(MOON, 'Default locked window', `${win.from} – ${win.to}`, 'window-open')}
       </div>
 
       <div class="group-label" style="margin-top:24px">PREFERENCES</div>
@@ -1264,23 +1261,6 @@ function accountPage() {
     <button type="button" class="oath-break" data-act="sign-out">Sign out</button>`);
 }
 
-function windowPage() {
-  const win = loadWindow();
-  return pageShell('LOCKED WINDOW', `
-    <div class="doc-note" style="margin-top:0">The hours new commitments use by default. Changing it does not alter commitments you have already made.</div>
-    <div class="window-row" style="margin-top:18px">
-      <label class="window-cell">
-        <span class="window-cell__label">FROM</span>
-        <input type="time" class="window-time" data-field="winFrom" value="${esc(win.from)}">
-      </label>
-      <span class="window-dash">–</span>
-      <label class="window-cell">
-        <span class="window-cell__label">TO</span>
-        <input type="time" class="window-time" data-field="winTo" value="${esc(win.to)}">
-      </label>
-    </div>`);
-}
-
 const DOCS = {
   support: ['SUPPORT', `
     <p>Sworn is made by a very small team. If something is broken, or the app is not doing what you expected, tell us through the App Store's support link and a person will read it.</p>
@@ -1337,7 +1317,6 @@ function docPage(kind) {
 function settingsPage() {
   switch (S.page) {
     case 'account': return accountPage();
-    case 'window': return windowPage();
     case 'support': return docPage('support');
     case 'terms': return docPage('terms');
     case 'privacy': return docPage('privacy');
@@ -1668,7 +1647,6 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'app': toggle(S.draft.apps, el.dataset.app); return render();
     case 'page-close': S.page = null; return render();
     case 'account': S.page = 'account'; return render();
-    case 'window-open': S.page = 'window'; return render();
     case 'doc-support': S.page = 'support'; return render();
     case 'doc-terms': S.page = 'terms'; return render();
     case 'doc-privacy': S.page = 'privacy'; return render();
@@ -1729,12 +1707,6 @@ document.getElementById('phone').addEventListener('input', (e) => {
     return;
   }
 
-  if (field === 'winFrom' || field === 'winTo') {
-    const w = loadWindow();
-    w[field === 'winFrom' ? 'from' : 'to'] = e.target.value;
-    saveWindow(w);
-    return;
-  }
   if (field === 'time' || field === 'until') {
     S.draft[field] = e.target.value;
     const label = document.querySelector(`[data-section="${field}"] .tile__val`);
