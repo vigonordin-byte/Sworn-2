@@ -1651,3 +1651,23 @@ body { font-family: var(--sf); }
 }
 .fab:hover { filter: brightness(1.06); }
 .fab:active { transform: scale(.94); }
+
+/* ---------------------------------------------------------------- day strip */
+
+/* One cell per day: a calm filled mark when the commitment was kept, a clear
+   red one when it was broken. The old full-height bars turned binary data
+   into a solid white rectangle. */
+.daystrip { display: flex; align-items: stretch; height: 56px; }
+
+.dc {
+  flex: 1;
+  min-width: 2px;
+  border-radius: 3px;
+  /* Kept days sit back so the two things worth seeing — a broken day and
+     where today is — carry the eye. */
+  background: rgba(242, 240, 236, .22);
+}
+.dc--broke { background: #d6544a; }
+.dc--today { background: #e7bc6a; }
+
+@media (max-width: 380px) { .daystrip { height: 48px; } }

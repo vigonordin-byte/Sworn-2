@@ -824,12 +824,16 @@ function analyticsTab() {
       </div>`;
   }
 
+  /* Each day was either kept or it was not, so it is drawn that way: one
+     cell per day, filled when kept and marked when broken. Rendering binary
+     data as full-height bars produced a solid white block that said nothing. */
   const bars = dailyKept(RANGE_DAYS[S.range]);
-  const gap = bars.length > 40 ? 1 : bars.length > 12 ? 2 : 6;
+  const gap = bars.length > 40 ? 1 : bars.length > 12 ? 2 : 4;
 
-  const chart = bars.map((v) => {
-    const bg = v >= 95 ? '#fff' : v >= 70 ? 'rgba(255,255,255,.5)' : 'rgba(255,255,255,.16)';
-    return `<div style="height:${Math.max(6, v)}%;background:${bg}"></div>`;
+  const chart = bars.map((v, i) => {
+    const kept = v === 100;
+    const last = i === bars.length - 1;
+    return `<div class="dc${kept ? '' : ' dc--broke'}${last ? ' dc--today' : ''}"></div>`;
   }).join('');
 
   const hours = urgeByHour().map((v) => {
@@ -852,6 +856,7 @@ function analyticsTab() {
     </div>
 
     <div class="scroll" style="top:calc(106px + var(--safe-top));bottom:var(--nav-h);padding:22px 20px 24px">
+      <div class="scroll__breathe">
 
       <button type="button" class="card an-card${on(S.card === 1)}" data-act="card" data-card="1" aria-expanded="${S.card === 1}">
         <span style="display:flex;align-items:center;justify-content:space-between;gap:12px">
@@ -864,7 +869,7 @@ function analyticsTab() {
           </span>
           <span class="an-card__arrow">›</span>
         </span>
-        <span class="chart" style="margin-top:16px;gap:${gap}px">${chart}</span>
+        <span class="daystrip" style="margin-top:16px;gap:${gap}px">${chart}</span>
         ${S.card === 1 ? `
         <span class="axis" style="margin-top:8px"><span>${bars.length >= RANGE_DAYS[S.range] ? RANGE_AXIS[S.range] : 'Day one'}</span><span>Today</span></span>
         <span class="an-card__more" style="display:block">${esc(STATS.rateNote)}</span>` : ''}
@@ -930,6 +935,7 @@ function analyticsTab() {
         </span>` : ''}
       </button>
 
+      </div>
     </div>`;
 }
 
