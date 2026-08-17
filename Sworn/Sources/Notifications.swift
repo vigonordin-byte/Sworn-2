@@ -315,15 +315,20 @@ final class Notifications: NSObject, UNUserNotificationCenterDelegate {
     // MARK: milestones
 
     /* Scheduled ahead from the streak start, so they land whether or not the
-       app is ever opened, and are wiped and rebuilt the moment the streak
+       app is ever opened, and wiped and rebuilt the moment the streak
        restarts. Fired late morning rather than at the exact hour the streak
-       ticks over, which would often be the middle of the night. */
+       ticks over, which would often be the middle of the night.
+
+       Day one is the day they committed, matching the counter: a three-day
+       milestone lands on the third calendar day, two days after the start,
+       not three. Getting this wrong would tell someone they had reached three
+       days on their fourth. */
     private func scheduleMilestones(_ state: NotifState) {
         guard let start = state.streakStart else { return }
         let calendar = Calendar.current
 
         for days in milestoneDays {
-            guard let day = calendar.date(byAdding: .day, value: days, to: start),
+            guard let day = calendar.date(byAdding: .day, value: days - 1, to: start),
                   let fireAt = calendar.date(bySettingHour: 10, minute: 0, second: 0, of: day),
                   fireAt > Date()
             else { continue }

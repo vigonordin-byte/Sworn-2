@@ -158,10 +158,13 @@ function loadProgress() {
   }
   const since = typeof p.since === 'number' ? p.since : null;
   const oathAt = typeof p.oathAt === 'number' ? p.oathAt : since;
-  // Calendar days, so the counter ticks at midnight like a person expects,
-  // not at whatever hour the oath happened to be sworn.
+  /* Calendar days, with the day they committed counted as day one. Commit on
+     Monday evening and Monday is day 1, Tuesday day 2 — nobody should have to
+     survive until Wednesday evening to be told they have two days. The
+     counter therefore turns over at midnight, not at the hour they swore. */
   const dayStart = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
-  const daysSworn = since ? Math.max(0, Math.round((dayStart(Date.now()) - dayStart(since)) / 864e5)) : 0;
+  const elapsed = since ? Math.round((dayStart(Date.now()) - dayStart(since)) / 864e5) : 0;
+  const daysSworn = since ? Math.max(1, elapsed + 1) : 0;
   // The longest run ever, which a lapse must not erase — achievements keep it.
   const best = Math.max(typeof p.best === 'number' ? p.best : 0, daysSworn);
   return { since, oathAt, best, daysSworn };
@@ -535,7 +538,9 @@ function dailyKept(nDays) {
   const dayMs = 864e5;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const daysSinceOath = Math.floor((Date.now() - p.oathAt) / dayMs) + 1;
+  // Calendar days, matching the counter: the day the commitment was made is
+  // day one, so the strip and the seal can never disagree.
+  const daysSinceOath = Math.round((today.getTime() - new Date(p.oathAt).setHours(0, 0, 0, 0)) / dayMs) + 1;
   const total = Math.max(1, Math.min(nDays, daysSinceOath));
   const out = [];
   for (let i = total - 1; i >= 0; i--) {

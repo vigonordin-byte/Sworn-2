@@ -147,7 +147,9 @@ function tierView(i) {
     glow: `radial-gradient(circle, ${d.accent}4d 0%, rgba(0,0,0,0) 68%)`,
     ring: `conic-gradient(from 0deg, ${d.a1}, ${d.a2}22 22%, ${d.a1}cc 48%, ${d.a2}22 72%, ${d.a1})`,
     big: isCur ? S.daysSworn : earned ? (d.next || d.at) : d.at,
-    caption: isCur ? B().streakLabel : earned ? 'DAYS CLEARED' : 'DAYS REQUIRED',
+    caption: isCur
+      ? (S.daysSworn === 1 ? B().streakLabel.replace('DAYS', 'DAY') : B().streakLabel)
+      : earned ? 'DAYS CLEARED' : 'DAYS REQUIRED',
     numShadow: `0 2px 26px ${d.accent}66`
   };
 }
