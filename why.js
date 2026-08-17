@@ -350,17 +350,18 @@ function loadUrge() {
    happened and start again — not so the app can hold it against them. The one
    consequence is honest arithmetic: DAYS FREE restarts, because it must be
    true. The oath, the history and the locks are untouched. */
-function recordLapse(note) {
+function recordLapse(note, reason) {
   const at = Date.now();
   const urge = loadUrge();
-  // The note stays on this device, full stop. Only the moment syncs.
-  urge.lapses.push({ at, note: (note || '').trim() });
+  // The note stays on this device, full stop. Only the moment and the
+  // structured reason category sync.
+  urge.lapses.push({ at, note: (note || '').trim(), reason: reason || '' });
   saveUrge(urge);
   // loadProgress folds the streak that just ended into `best` before the
   // reset, so the earned tiers survive the restart.
   const p = loadProgress();
   saveProgress({ since: at, oathAt: p.oathAt, best: p.best });
-  pushEvent('commitment_broken', at);
+  pushEvent('commitment_broken', at, reason);
   pushProfile();
 }
 
@@ -436,8 +437,10 @@ function pushProfile() {
   });
 }
 
-function pushEvent(type, at) {
-  bridge({ action: 'event', type, at: at || Date.now() });
+function pushEvent(type, at, reason) {
+  const msg = { action: 'event', type, at: at || Date.now() };
+  if (reason) msg.reason = reason;
+  bridge(msg);
 }
 
 /* Apple's picker returns opaque tokens, so counts are all the UI may know.
@@ -477,6 +480,15 @@ function urgeUntilLabel() {
 }
 
 function saveWhy(why) {
+  // Callers pass partial records (dev seeds, older flows). The cache must be
+  // as normalized as what loadWhy builds, or later field access explodes.
+  why.text = typeof why.text === 'string' ? why.text : '';
+  why.cost = typeof why.cost === 'string' ? why.cost : '';
+  why.future = typeof why.future === 'string' ? why.future : '';
+  why.committed = why.committed === true;
+  why.reasons = Array.isArray(why.reasons) ? why.reasons : [];
+  why.goals = Array.isArray(why.goals) ? why.goals : [];
+  why.triggers = Array.isArray(why.triggers) ? why.triggers : [];
   whyCache = why;
   try {
     localStorage.setItem(WHY_KEY, JSON.stringify(why));

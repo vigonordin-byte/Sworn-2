@@ -43,6 +43,9 @@ create table public.events (
     'protection_used', 'temptation_resisted', 'commitment_broken', 'protection_bypassed'
   )),
   at timestamptz not null,
+  -- structured lapse reason: urge / bypass / unrealistic / other. The free-text
+  -- explanation stays on the device; only the category syncs.
+  reason text,
   -- retries are idempotent: the same moment can only land once
   unique (user_id, type, at)
 );

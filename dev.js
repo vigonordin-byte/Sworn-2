@@ -113,7 +113,7 @@ window.SwornDev = (() => {
         // A lapse two days ago on top of the seeded record, so recovery,
         // the restarted streak and the analytics all have history behind them.
         const u = loadUrge();
-        u.lapses.push({ at: Date.now() - 2 * 864e5, note: 'Late, scrolling in bed.' });
+        u.lapses.push({ at: Date.now() - 2 * 864e5, note: 'Late, scrolling in bed.', reason: 'urge' });
         saveUrge(u);
         saveProgress({ since: Date.now() - 2 * 864e5, oathAt: Date.now() - 11 * 864e5, best: 9 });
         native({ action: 'devOnboarded', value: true });

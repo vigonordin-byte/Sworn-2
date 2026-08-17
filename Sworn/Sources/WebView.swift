@@ -151,7 +151,8 @@ struct WebView: UIViewRepresentable {
                 case "event":
                     if let type = body["type"] as? String,
                        let at = body["at"] as? Double {
-                        SyncEngine.shared.recordEvent(type: type, at: at)
+                        SyncEngine.shared.recordEvent(type: type, at: at,
+                                                      reason: body["reason"] as? String)
                     }
 
                 case "urge":

@@ -257,7 +257,7 @@ window.sworn = {
         if (!at) return;
         if (e.type === 'protection_used' && !u.log.includes(at)) u.log.push(at);
         else if (e.type === 'temptation_resisted' && !u.resists.includes(at)) u.resists.push(at);
-        else if (e.type === 'commitment_broken' && !u.lapses.some((l) => l.at === at)) u.lapses.push({ at, note: '' });
+        else if (e.type === 'commitment_broken' && !u.lapses.some((l) => l.at === at)) u.lapses.push({ at, note: '', reason: e.reason || '' });
       });
       saveUrge(u);
 
@@ -668,8 +668,16 @@ function intervention() {
 }
 
 
-/* Not a verdict. They already know what happened; this only gives them their
-   own reason back and a way to start again. */
+/* Not a verdict. They already know what happened; this asks one structured
+   question so the pattern can be seen later, gives them their own words back,
+   and offers the way to start again. */
+const LAPSE_REASONS = [
+  ['urge', 'I gave in to an urge'],
+  ['bypass', 'I bypassed protection'],
+  ['unrealistic', 'My commitment was unrealistic'],
+  ['other', 'Something else']
+];
+
 function lapseScreen() {
   return `
     <div class="intervene intervene--calm">
@@ -677,8 +685,18 @@ function lapseScreen() {
       <div class="lapse__said">You said:</div>
       <div class="lapse__quote">“${esc(whyText())}”</div>
       <div class="lapse__ask">${esc(B().failureLine)}</div>
-      <textarea class="why-edit" id="lapsenote" placeholder="Optional. Only you ever see this."></textarea>
-      <button type="button" class="cta-gold" style="margin-top:auto" data-act="again">START AGAIN</button>
+      <div class="lapse__reasons" role="radiogroup" aria-label="What happened">
+        ${LAPSE_REASONS.map(([id, label]) => `
+          <button type="button" class="reason-row${on(S.lapseReason === id)}" data-act="lapse-reason" data-reason="${id}"
+            role="radio" aria-checked="${S.lapseReason === id}">
+            <span class="reason-row__dot"></span>
+            <span>${esc(label)}</span>
+          </button>`).join('')}
+      </div>
+      <textarea class="why-edit" id="lapsenote" placeholder="Optional. Only you ever see this."
+        style="${S.lapseReason === 'other' ? '' : 'display:none'}"></textarea>
+      <button type="button" class="cta-gold${S.lapseReason ? '' : ' cta-gold--muted'}" style="margin-top:auto"
+        id="lapsecta" data-act="again"${S.lapseReason ? '' : ' disabled'}>START AGAIN</button>
       <div class="lapse__foot">Your day counter starts again. Your commitment, your history and your locks all stay.</div>
     </div>`;
 }
@@ -1086,8 +1104,7 @@ function windowPage() {
 
 const DOCS = {
   support: ['SUPPORT', `
-    <p>Sworn is made by a very small team. If something is broken, or the app is not doing what you expected, write to us and a person will read it.</p>
-    <p class="doc-strong">hello@sworn.app</p>
+    <p>Sworn is made by a very small team. If something is broken, or the app is not doing what you expected, tell us through the App Store's support link and a person will read it.</p>
     <p>Include what you were doing and what happened. If it is about blocking, say which apps and which hours. That is almost always where the answer is.</p>
     <h3>Blocking is not working</h3>
     <p>Sworn blocks apps using Apple's Screen Time. Two things have to be true: you granted Screen Time access when asked, and the commitment has apps chosen and is switched on. You can check both under Commitments.</p>
@@ -1127,7 +1144,7 @@ const DOCS = {
     <h3>What we do not do</h3>
     <p>No advertising. No analytics SDKs. No selling or sharing of anything. No profile built about you.</p>
     <h3>Deleting it</h3>
-    <p>Delete the app and the data goes with it. To sever the Apple sign-in, use Settings → Apple ID → Sign in with Apple. Questions: hello@sworn.app.</p>
+    <p>Delete the app and the data goes with it. To sever the Apple sign-in, use Settings → Apple ID → Sign in with Apple.</p>
   `]
 };
 
@@ -1352,10 +1369,25 @@ document.getElementById('phone').addEventListener('click', (e) => {
       return endIntervention();
     case 'iv-continue': return completeBypass();
     case 'cancel': S.view = 'home'; return render();
-    case 'lapse': S.view = 'lapse'; return render();
-    case 'again': {
+    case 'lapse': S.view = 'lapse'; S.lapseReason = null; return render();
+    case 'lapse-reason': {
+      S.lapseReason = el.dataset.reason;
+      document.querySelectorAll('[data-act="lapse-reason"]').forEach((row) => {
+        const sel = row.dataset.reason === S.lapseReason;
+        row.classList.toggle('is-on', sel);
+        row.setAttribute('aria-checked', sel);
+      });
       const note = document.getElementById('lapsenote');
-      recordLapse(note ? note.value : '');
+      if (note) note.style.display = S.lapseReason === 'other' ? '' : 'none';
+      const cta = document.getElementById('lapsecta');
+      if (cta) { cta.disabled = false; cta.classList.remove('cta-gold--muted'); }
+      return;
+    }
+    case 'again': {
+      if (!S.lapseReason) return;
+      const note = document.getElementById('lapsenote');
+      recordLapse(S.lapseReason === 'other' && note ? note.value : '', S.lapseReason);
+      S.lapseReason = null;
       // The lapse restarted the streak; the seal must show it right away.
       S.daysSworn = loadProgress().daysSworn;
       return endIntervention();

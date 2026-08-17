@@ -153,9 +153,11 @@ final class SyncEngine {
     }
 
     /// A meaningful behavioural event. Queued durably, pushed with retry.
-    func recordEvent(type: String, at ms: Double) {
+    func recordEvent(type: String, at ms: Double, reason: String? = nil) {
         var queue = pendingEvents()
-        queue.append(["type": type, "at": ms])
+        var event: [String: Any] = ["type": type, "at": ms]
+        if let reason, !reason.isEmpty { event["reason"] = reason }
+        queue.append(event)
         stash(queue, at: Key.pendingEvents)
         Task { await flush() }
     }
@@ -194,7 +196,9 @@ final class SyncEngine {
         if !queue.isEmpty {
             let rows = queue.compactMap { event -> [String: Any]? in
                 guard let type = event["type"] as? String, let ms = event["at"] as? Double else { return nil }
-                return ["user_id": userId ?? "", "type": type, "at": iso(ms: ms)]
+                var row: [String: Any] = ["user_id": userId ?? "", "type": type, "at": iso(ms: ms)]
+                if let reason = event["reason"] as? String { row["reason"] = reason }
+                return row
             }
             // ignore-duplicates + the unique constraint make retries idempotent
             if await upsert(table: "events", rows: rows, conflict: "user_id,type,at", merge: false) {
@@ -213,7 +217,7 @@ final class SyncEngine {
         guard let uid = userId else { return nil }
 
         async let profileData = get(path: "rest/v1/profiles", query: "id=eq.\(uid)&select=*")
-        async let eventData = get(path: "rest/v1/events", query: "user_id=eq.\(uid)&select=type,at&order=at.asc&limit=2000")
+        async let eventData = get(path: "rest/v1/events", query: "user_id=eq.\(uid)&select=type,at,reason&order=at.asc&limit=2000")
         async let oathData = get(path: "rest/v1/oaths", query: "user_id=eq.\(uid)&select=*")
 
         let profiles = (try? JSONSerialization.jsonObject(with: await profileData ?? Data())) as? [[String: Any]] ?? []
