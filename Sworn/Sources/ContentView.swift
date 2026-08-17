@@ -57,6 +57,11 @@ struct ContentView: View {
         }
         .animation(.easeOut(duration: 0.18), value: showSplash)
         .task { await auth.restore() }
+        // Each stage builds its own web view, so the readiness flag has to
+        // reset with it — otherwise the splash lifts before the next page has
+        // painted and a black frame shows through the handover.
+        .onChange(of: app.onboarded) { _, _ in webReady = false }
+        .onChange(of: auth.session) { _, _ in webReady = false }
     }
 
     private var showSplash: Bool {

@@ -152,6 +152,25 @@ final class SyncEngine {
         Task { await flush() }
     }
 
+    /* Everything staged is held as JSON, never as a raw dictionary.
+
+       A JS null arrives across the WKWebView bridge as NSNull, which is not a
+       property-list type: handing one to UserDefaults.set raises an uncaught
+       NSInvalidArgumentException and kills the app. Profiles legitimately
+       contain nulls — no name until sign-in, no cost until it is written — so
+       "Start my journey" terminated the app on the spot. JSON round-trips
+       null correctly and Data is always plist-safe. */
+    private func stash(_ value: Any, at key: String) {
+        guard JSONSerialization.isValidJSONObject(value),
+              let data = try? JSONSerialization.data(withJSONObject: value) else { return }
+        defaults.set(data, forKey: key)
+    }
+
+    private func staged(_ key: String) -> Any? {
+        guard let data = defaults.data(forKey: key) else { return nil }
+        return try? JSONSerialization.jsonObject(with: data)
+    }
+
     /// A meaningful behavioural event. Queued durably, pushed with retry.
     func recordEvent(type: String, at ms: Double, reason: String? = nil) {
         var queue = pendingEvents()
@@ -170,7 +189,7 @@ final class SyncEngine {
         guard signedIn else { return }
         await refreshIfNeeded()
 
-        if let profile = defaults.dictionary(forKey: Key.pendingProfile) {
+        if let profile = staged(Key.pendingProfile) as? [String: Any] {
             var row = profile
             row["id"] = userId
             row["updated_at"] = isoNow()
@@ -179,7 +198,7 @@ final class SyncEngine {
             }
         }
 
-        if let oaths = defaults.array(forKey: Key.pendingOaths) as? [[String: Any]] {
+        if let oaths = staged(Key.pendingOaths) as? [[String: Any]] {
             let rows = oaths.map { oath -> [String: Any] in
                 var row = oath
                 row["user_id"] = userId
@@ -268,11 +287,7 @@ final class SyncEngine {
     }
 
     private func pendingEvents() -> [[String: Any]] {
-        defaults.array(forKey: Key.pendingEvents) as? [[String: Any]] ?? []
-    }
-
-    private func stash(_ value: Any, at key: String) {
-        defaults.set(value, forKey: key)
+        staged(Key.pendingEvents) as? [[String: Any]] ?? []
     }
 
     private func isoNow() -> String { iso(ms: Date().timeIntervalSince1970 * 1000) }
