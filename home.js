@@ -181,10 +181,59 @@ function lockedApps() {
 }
 
 /** The active oath that locks soonest, by clock time. */
-function nextLock() {
+const hhmmToMinutes = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+
+/* Whether a commitment is blocking at this exact moment. A window that runs
+   past midnight belongs to the day it started on, so 20:00–06:00 set for
+   Monday is still Monday's window at two on Tuesday morning. */
+function isLockActive(o, now = new Date()) {
+  if (!o.on || !o.days.length) return false;
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const start = hhmmToMinutes(o.time);
+  const end = hhmmToMinutes(o.until);
+  const today = now.getDay();
+  const yesterday = (today + 6) % 7;
+
+  if (end > start) return o.days.includes(today) && mins >= start && mins < end;
+  // crosses midnight: the evening half is today's, the morning half yesterday's
+  return (o.days.includes(today) && mins >= start)
+      || (o.days.includes(yesterday) && mins < end);
+}
+
+/** The commitment blocking right now, if any. */
+function activeLock(now = new Date()) {
+  return OATHS.find((o) => isLockActive(o, now)) || null;
+}
+
+/** Minutes until a commitment next begins, ignoring one already running. */
+function minutesUntilStart(o, now = new Date()) {
+  if (!o.on || !o.days.length) return Infinity;
+  const start = hhmmToMinutes(o.time);
+  for (let ahead = 0; ahead < 8; ahead++) {
+    const day = new Date(now);
+    day.setDate(day.getDate() + ahead);
+    if (!o.days.includes(day.getDay())) continue;
+    day.setHours(0, 0, 0, 0);
+    const at = day.getTime() + start * 60_000;
+    if (at > now.getTime()) return Math.round((at - now.getTime()) / 60_000);
+  }
+  return Infinity;
+}
+
+/** The commitment that starts soonest — genuinely next, not earliest by clock. */
+function nextLock(now = new Date()) {
   const live = OATHS.filter((o) => o.on && o.days.length);
   if (!live.length) return null;
-  return live.slice().sort((a, b) => a.time.localeCompare(b.time))[0];
+  return live.slice().sort((a, b) => minutesUntilStart(a, now) - minutesUntilStart(b, now))[0];
+}
+
+/** "in 3h 20m" — how long until a window opens. */
+function untilLabel(minutes) {
+  if (!isFinite(minutes)) return '';
+  if (minutes < 60) return `in ${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m ? `in ${h}h ${m}m` : `in ${h}h`;
 }
 
 /** 12-hour label for a "HH:MM" string. */
@@ -388,13 +437,18 @@ function protectionCard() {
       </button>`;
   }
 
-  const lock = nextLock();
+  /* Green means blocking right now, and nothing else. A commitment that has
+     not opened yet is real but dormant, and colouring it like live protection
+     told the user they were covered when they were not. */
+  const live = activeLock();
+  const lock = live || nextLock();
   if (lock) {
+    const starts = live ? '' : untilLabel(minutesUntilStart(lock));
     return `
       <button type="button" class="card prot" data-act="tab" data-tab="commitments">
         <span style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
           <span style="display:block">
-            <span class="prot__on"><i></i>PROTECTED</span>
+            <span class="prot__on${live ? '' : ' prot__on--idle'}"><i></i>${live ? 'PROTECTED NOW' : 'SCHEDULED'}</span>
             <span style="display:block;margin-top:9px" class="prot__until">${esc(lock.time)} – ${esc(lock.until)}</span>
           </span>
           <span style="display:flex;align-items:center;gap:10px;flex:0 0 auto">
@@ -405,7 +459,7 @@ function protectionCard() {
             <span class="chev">›</span>
           </span>
         </span>
-        <span style="display:block;margin-top:12px;font-size:13px;color:rgba(235,235,245,.5)">${esc(scheduleLabel(lock.days))} · ${esc(lock.name)}</span>
+        <span style="display:block;margin-top:12px;font-size:13px;color:rgba(235,235,245,.5)">${live ? 'Blocking now' : `Starts ${esc(starts)}`} · ${esc(scheduleLabel(lock.days))}</span>
       </button>`;
   }
 

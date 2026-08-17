@@ -1193,6 +1193,11 @@ body { font-family: var(--sf); }
 .prot__on--off { color: rgba(235, 235, 245, .5); }
 .prot__on--off i { background: rgba(235, 235, 245, .35); box-shadow: none; }
 
+/* Set up, but not blocking yet. Present and white rather than green, which
+   is reserved for protection that is actually live. */
+.prot__on--idle { color: var(--ink); }
+.prot__on--idle i { background: var(--ink); box-shadow: none; }
+
 .saves {
   display: block;
   margin-top: 16px;
