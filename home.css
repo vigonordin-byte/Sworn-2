@@ -1005,17 +1005,7 @@ body { font-family: var(--sf); }
 .pick:hover { background: rgba(255, 255, 255, .04); }
 .pick.is-on { background: rgba(52, 199, 89, .1); }
 
-.pick--stacked { align-items: flex-start; }
 .pick__name { display: block; font-size: 14px; font-weight: 700; letter-spacing: 1.4px; }
-.pick__desc {
-  display: block;
-  margin-top: 4px;
-  font-size: 12.5px;
-  line-height: 1.35;
-  color: rgba(235, 235, 245, .5);
-  letter-spacing: 0;
-  font-weight: 400;
-}
 .pick__mark { flex: 0 0 17px; height: 17px; }
 
 .sheet-btn:disabled {

@@ -256,7 +256,7 @@ function saveProtect(p) {
 function seedFirstOath(p) {
   if (!p.days.length) return;
   const existing = loadOaths() || [];
-  const first = existing.find((o) => o.id === 1) || { id: 1, friction: 1, on: true };
+  const first = existing.find((o) => o.id === 1) || { id: 1, on: true };
   const oath = {
     ...first,
     name: first.name || `Protected ${p.from}–${p.to}`,

@@ -47,8 +47,8 @@ window.SwornDev = (() => {
     });
     saveProtect({ from: '20:00', to: '23:00', days: [0, 1, 2, 3, 4, 5, 6], apps: ['Reddit', 'X', 'Safari'] });
     saveOaths([
-      { id: 1, name: 'No Reddit after 20:00', time: '20:00', until: '06:00', days: [0, 1, 2, 3, 4, 5, 6], apps: ['Reddit', 'X', 'Safari'], friction: 1, on: true },
-      { id: 2, name: 'Phone out of the bedroom', time: '22:30', until: '07:00', days: [0, 1, 2, 3, 4], apps: ['Reddit', 'X', 'Instagram', 'TikTok'], friction: 1, on: false }
+      { id: 1, name: 'No Reddit after 20:00', time: '20:00', until: '06:00', days: [0, 1, 2, 3, 4, 5, 6], apps: ['Reddit', 'X', 'Safari'], on: true },
+      { id: 2, name: 'Phone out of the bedroom', time: '22:30', until: '07:00', days: [0, 1, 2, 3, 4], apps: ['Reddit', 'X', 'Instagram', 'TikTok'], on: false }
     ]);
   };
 

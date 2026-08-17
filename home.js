@@ -37,12 +37,6 @@ function persistOaths() {
 /** Apps the user can put under an oath. */
 const APP_LIST = ['Reddit', 'X', 'Instagram', 'TikTok', 'YouTube', 'Safari'];
 
-const FRICTION_LEVELS = [
-  ['GENTLE', 'A reminder and a pause. You can still continue.'],
-  ['STRICT', 'Blocked. Unlocking takes 60 seconds and a written reason.'],
-  ['SEALED', 'Blocked with no override until the commitment ends.']
-];
-
 /* How many days back each range reaches; ALL is clamped to the oath date. */
 const RANGE_DAYS = { '7D': 7, '30D': 30, '90D': 90, 'ALL': 3650 };
 const RANGE_AXIS = { '7D': '7 days ago', '30D': '30 days ago', '90D': '90 days ago', 'ALL': 'Day one' };
@@ -66,7 +60,7 @@ const S = {
   left: 60,
   range: '30D',
   draft: null,         // the oath being created/edited, or null
-  sheetSection: null,  // expanded sheet row: null | 'time' | 'apps' | 'friction'
+  sheetSection: null,  // expanded sheet row: null | 'time' | 'until' | 'apps'
   whyOpen: false,
   whyEditing: false,
   achievementsOpen: false,
@@ -263,7 +257,7 @@ window.sworn = {
         saveOaths(data.oaths.map((o) => ({
           id: o.oath_id, name: o.name || 'Protection',
           time: o.lock_at || '20:00', until: o.unlock_at || '06:00',
-          days: Array.isArray(o.days) ? o.days : [], apps: [], friction: 1,
+          days: Array.isArray(o.days) ? o.days : [], apps: [],
           on: o.enabled !== false
         })));
         OATHS.length = 0;
@@ -1057,7 +1051,7 @@ const countLabel = (n) => n + (n === 1 ? ' app' : ' apps');
 
 function blankOath() {
   const w = loadWindow();
-  return { id: null, name: '', time: w.from, until: w.to, days: [0, 1, 2, 3, 4, 5, 6], apps: [], friction: 1, on: true };
+  return { id: null, name: '', time: w.from, until: w.to, days: [0, 1, 2, 3, 4, 5, 6], apps: [], on: true };
 }
 
 function oathSheet() {
@@ -1128,19 +1122,6 @@ function oathSheet() {
       <div class="tile-note">Preview only. Real blocking uses Apple's picker inside the app.</div>
       `}
 
-      ${row('Strictness', FRICTION_LEVELS[d.friction][0], 'friction')}
-      ${sec === 'friction' ? `
-        <div class="tile tile--sub">
-          ${FRICTION_LEVELS.map(([name, desc], i) => `
-            <button type="button" class="pick pick--stacked${on(d.friction === i)}" data-act="friction" data-i="${i}"
-              role="radio" aria-checked="${d.friction === i}">
-              <span>
-                <span class="pick__name">${name}</span>
-                <span class="pick__desc">${esc(desc)}</span>
-              </span>
-              <span class="pick__mark">${d.friction === i ? svg('<path d="M4 12.5l5 5L20 6.5"/>', 17, '#34c759', 2.4) : ''}</span>
-            </button>`).join('')}
-        </div>` : ''}
 
       ${editing ? '<button type="button" class="oath-break" data-act="oath-break">Break this commitment</button>' : ''}
 
@@ -1658,7 +1639,6 @@ document.getElementById('phone').addEventListener('click', (e) => {
     }
     case 'day': toggle(S.draft.days, i); return render();
     case 'app': toggle(S.draft.apps, el.dataset.app); return render();
-    case 'friction': S.draft.friction = i; return render();
     case 'page-close': S.page = null; return render();
     case 'account': S.page = 'account'; return render();
     case 'window-open': S.page = 'window'; return render();
