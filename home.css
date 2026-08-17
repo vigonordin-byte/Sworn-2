@@ -1584,3 +1584,7 @@ body { font-family: var(--sf); }
 .reason-row.is-on .reason-row__dot { border-color: #e7bc6a; background: #e7bc6a; box-shadow: inset 0 0 0 3.5px #16130c; }
 
 .cta-gold--muted { opacity: .45; cursor: default; }
+
+/* The home tab fits on one screen, but a scroller that cannot move at all
+   feels frozen. One extra pixel keeps the native rubber-band alive. */
+.scroll__breathe { min-height: calc(100% + 1px); }
