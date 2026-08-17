@@ -126,3 +126,15 @@ schemes:
       config: Debug
     archive:
       config: Release
+
+  # Exactly what a user installs from the App Store: no developer tools, no
+  # test shortcuts, no seeded data. Pick this in Xcode's scheme menu to try
+  # the app for real.
+  Sworn (Real):
+    build:
+      targets:
+        Sworn: all
+    run:
+      config: Release
+    archive:
+      config: Release
