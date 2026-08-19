@@ -5,7 +5,7 @@ import ManagedSettings
 /// State the app and the DeviceActivity extension both need. They are separate
 /// processes, so everything travels through the shared App Group container.
 enum Shared {
-    static let appGroup = "group.com.vigonordin.sworn2app"
+    static let appGroup = "group.com.vigonordin.swornapp"
 
     /* The app and the monitor extension are separate processes and meet only
        here. If the App Group in the entitlements does not match this string,
