@@ -699,6 +699,14 @@ function protectScreen() {
     ? (shieldCount ? selectionLabel(shieldSel) : 'None yet')
     : (p.apps.length ? p.apps.length + (p.apps.length === 1 ? ' app' : ' apps') : 'None yet');
 
+  /* Tapping the time opens the system wheel straight away. There is no
+     expanding row underneath repeating the value, and no second tap. */
+  const timeRow = (label, bind, value) => `
+    <label class="tile tile--row" style="margin-top:11px">
+      <span style="font-weight:600">${label}</span>
+      <input type="time" class="tile-time" data-bind="${bind}" value="${esc(value)}">
+    </label>`;
+
   const row = (label, value, section, act) => `
     <button type="button" class="tile tile--row${on(sec === section)}" style="margin-top:11px"
       data-act="${act || 'prot-section'}" data-section="${section}" aria-expanded="${sec === section}">
@@ -715,17 +723,8 @@ function protectScreen() {
       </div>
 
       <div class="scroll" style="top:186px;bottom:98px">
-        ${row('Locks at', p.from, 'from')}
-        ${sec === 'from' ? `
-        <div class="tile tile--sub">
-          <input type="time" class="time-input" data-bind="protectFrom" value="${esc(p.from)}">
-        </div>` : ''}
-
-        ${row('Unlocks at', p.to, 'until')}
-        ${sec === 'until' ? `
-        <div class="tile tile--sub">
-          <input type="time" class="time-input" data-bind="protectTo" value="${esc(p.to)}">
-        </div>` : ''}
+        ${timeRow('Locks at', 'protectFrom', p.from)}
+        ${timeRow('Unlocks at', 'protectTo', p.to)}
 
         <div class="tile" style="margin-top:11px;padding:18px">
           <div style="font-size:13px;color:rgba(242,240,236,.55)">On these nights</div>
@@ -1077,8 +1076,7 @@ document.getElementById('phone').addEventListener('input', (e) => {
     const field = key === 'protectFrom' ? 'from' : 'to';
     p[field] = e.target.value;
     saveProtect(p);
-    const label = document.getElementById(field === 'from' ? 'protval-from' : 'protval-until');
-    if (label) label.textContent = e.target.value;
+    // The input is the label, so there is nothing else to update.
     return;
   }
   if (key === 'text' || key === 'cost') {

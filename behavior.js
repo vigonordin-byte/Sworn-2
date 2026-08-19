@@ -50,7 +50,7 @@ const BEHAVIOR_CONFIG = {
 
     symptoms: [
       ['FAITH', ['Feeling distant from God']],
-      ['MENTAL', ["Poor memory or 'brain fog'", 'Difficulty concentrating', 'General anxiety', 'Feeling unmotivated', 'Lack of ambition to pursue goals']],
+      ['MENTAL', ["Poor memory or 'brain fog'", 'Difficulty concentrating', 'General anxiety', 'Feeling unmotivated']],
       ['PHYSICAL', ['Tiredness and lethargy', 'Weak arousal without it', 'Low sex drive or desire']],
       ['SOCIAL', ['Unsatisfying intimacy', 'Feeling isolated from others', 'Reduced desire to socialize', 'Low self-confidence', 'Feeling unworthy of love']]
     ],
