@@ -10,7 +10,7 @@
 	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.vigonordin.swornapp</string>
+		<string>group.com.vigonordin.sworn2app</string>
 	</array>
 </dict>
 </plist>

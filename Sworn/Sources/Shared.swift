@@ -7,8 +7,21 @@ import ManagedSettings
 enum Shared {
     static let appGroup = "group.com.vigonordin.sworn2app"
 
+    /* The app and the monitor extension are separate processes and meet only
+       here. If the App Group in the entitlements does not match this string,
+       the suite comes back nil — and falling through to .standard gives each
+       process its own private container that merely looks like it works. The
+       app stores a selection, the extension finds nothing, and protection
+       silently never blocks. That failure is invisible at runtime, so it is
+       made loud here rather than discovered on a device weeks later. */
     static var defaults: UserDefaults {
-        UserDefaults(suiteName: appGroup) ?? .standard
+        guard let shared = UserDefaults(suiteName: appGroup) else {
+            assertionFailure("App Group \(appGroup) is missing from the entitlements; "
+                             + "the extension cannot see anything the app saves.")
+            NSLog("Sworn: App Group %@ unavailable — protection cannot work.", appGroup)
+            return .standard
+        }
+        return shared
     }
 
     /// Whether onboarding has been completed. Kept here rather than in webview
