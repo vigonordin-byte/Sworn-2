@@ -66,6 +66,13 @@ private enum Keychain {
 
 // MARK: - engine
 
+extension Notification.Name {
+    /// A Supabase session now exists. Signing in hands the user to the app
+    /// immediately while the token exchange is still in flight, so anything
+    /// that needs the server has to wait for this rather than assume.
+    static let swornSessionReady = Notification.Name("sworn.sessionReady")
+}
+
 final class SyncEngine {
     static let shared = SyncEngine()
 
@@ -100,6 +107,9 @@ final class SyncEngine {
         ])
         await storeSession(from: request)
         await flush()
+        // The page has already loaded and asked for a restore by now, and got
+        // nothing because this had not finished. Tell it to ask again.
+        if signedIn { NotificationCenter.default.post(name: .swornSessionReady, object: nil) }
         }
 
     private func refreshIfNeeded() async {

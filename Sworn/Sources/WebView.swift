@@ -249,6 +249,23 @@ struct WebView: UIViewRepresentable {
             }
         }
 
+        /// Kept so the observer dies with the bridge rather than outliving it.
+        private var sessionObserver: NSObjectProtocol?
+
+        deinit {
+            if let sessionObserver { NotificationCenter.default.removeObserver(sessionObserver) }
+        }
+
+        /// Push whatever is queued, then hand the page whatever the server
+        /// holds. Safe to run more than once: the web layer merges rather than
+        /// overwrites, and unions events it already has.
+        @MainActor
+        func pullAndRestore() async {
+            await SyncEngine.shared.flush()
+            guard let json = await SyncEngine.shared.pullAll() else { return }
+            call("window.sworn.onRestore && window.sworn.onRestore(\(json))")
+        }
+
         /// Set by ContentView so the web layer can sign the user out.
         var onSignOut: (() -> Void)?
         var onReady: (() -> Void)?
@@ -278,6 +295,16 @@ struct WebView: UIViewRepresentable {
             // holds. The web layer merges conservatively: streak dates only if
             // older, events unioned, oaths only into an empty list.
             RevealHaptics.shared.prepare()
+
+            /* Restoring needs a Supabase session, which may still be in flight
+               when the page finishes loading — that is the usual case right
+               after signing in. Listening means the first launch of a
+               reinstall gets the user's record back rather than silently
+               starting them at day one. */
+            sessionObserver = NotificationCenter.default.addObserver(
+                forName: .swornSessionReady, object: nil, queue: .main) { [weak self] _ in
+                    Task { @MainActor in await self?.pullAndRestore() }
+                }
 
             // A notification the user tapped to get here decides where to land.
             if let route = Notifications.shared.consumeRoute() {
