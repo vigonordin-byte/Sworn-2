@@ -44,6 +44,14 @@ targets:
       path: Sources/Info.plist
       properties:
         CFBundleDisplayName: Sworn
+        # xcodegen regenerates this plist, so every key has to live here or it
+        # is silently lost. These two track the settings below rather than
+        # being written twice.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # Sworn implements no encryption of its own; HTTPS and the Keychain are
+        # iOS's. Declaring it answers export compliance on every upload.
+        ITSAppUsesNonExemptEncryption: false
         UILaunchScreen:
           UIColorName: launchBackground
           # Drawn by the system before any code runs, so the first frame is
@@ -95,6 +103,9 @@ targets:
       path: ../SwornMonitor/Info.plist
       properties:
         CFBundleDisplayName: Sworn Monitor
+        # An extension's version must match the app it ships inside.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.deviceactivity.monitor-extension
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).SwornMonitor
