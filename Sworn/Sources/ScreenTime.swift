@@ -54,7 +54,10 @@ final class ScreenTime: ObservableObject {
         guard let id = pickerOathId else { return }
         Shared.saveSelection(selection, for: id)
         pickerOathId = nil
-        sync(oaths: oaths)
+        // Never prunes: onboarding picks apps before any commitment exists, so
+        // the list held here is empty and would look like the selection had
+        // been orphaned the instant it was made.
+        sync(oaths: oaths, pruneOrphans: false)
         onCountsChanged?()
     }
 
@@ -82,7 +85,10 @@ final class ScreenTime: ObservableObject {
 
     /// Rebuilds every monitored window from scratch. Cheap, and it keeps the
     /// device in step with the UI without diffing.
-    func sync(oaths: [OathSpec]) {
+    /// `pruneOrphans` is true only when `oaths` is the app's complete, current
+    /// list. Deleting a selection is irreversible, so it must never happen on
+    /// the strength of a list that simply has not been populated yet.
+    func sync(oaths: [OathSpec], pruneOrphans: Bool = true) {
         self.oaths = oaths
 
         // Only the oath windows — a bare stopMonitoring() would also cancel a
@@ -100,8 +106,9 @@ final class ScreenTime: ObservableObject {
             Shared.store(id).clearAllSettings()
             // A selection whose commitment no longer exists is a ghost: it
             // would still be counted as protection and pulled into an urge
-            // shield. Forget it outright.
-            if !known.contains(id) { Shared.forget(oathId: id) }
+            // shield. Forget it outright — but only when this list is
+            // authoritative, or onboarding's pick would be erased.
+            if pruneOrphans && !known.contains(id) { Shared.forget(oathId: id) }
         }
 
         // An urge shield blocks the union of every selection. Once the last

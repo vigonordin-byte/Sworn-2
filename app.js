@@ -128,8 +128,15 @@ const ONBOARDING_OATH_ID = 1;
 let shieldSel = null;
 let shieldCount = 0;
 
+/* Null until Screen Time has answered. False means the user declined, or the
+   device cannot offer it — either way onboarding must still have a way out. */
+let screenTimeOk = null;
+
 window.sworn = {
-  onAuth() { /* nothing to redraw here */ },
+  onAuth(granted) {
+    screenTimeOk = granted === true;
+    render();
+  },
   onCounts(counts) {
     shieldSel = (counts && counts[ONBOARDING_OATH_ID]) || null;
     shieldCount = selectionTotal(shieldSel);
@@ -679,7 +686,14 @@ function vulnerableScreen() {
    both nights and apps. */
 function protectScreen() {
   const p = loadProtect();
-  const ready = (NATIVE ? shieldCount > 0 : p.apps.length > 0) && p.days.length > 0;
+  /* Screen Time can be switched off, restricted, or simply declined. Blocking
+     the only way forward on something the user may be unable to grant would
+     trap them in onboarding, so a refusal turns this screen into one they can
+     finish and come back to. */
+  const blocked = NATIVE && screenTimeOk === false;
+  const ready = blocked
+    ? p.days.length > 0
+    : (NATIVE ? shieldCount > 0 : p.apps.length > 0) && p.days.length > 0;
   const sec = S.protSection;
   const appsLabel = NATIVE
     ? (shieldCount ? selectionLabel(shieldSel) : 'None yet')
@@ -723,8 +737,10 @@ function protectScreen() {
         </div>
 
         ${NATIVE
-          ? row('App blocking', appsLabel, 'apps', 'pick-apps')
+          ? row('App blocking', blocked ? 'Unavailable' : appsLabel, 'apps', 'pick-apps')
           : row('App blocking', appsLabel, 'apps')}
+        ${blocked ? `
+        <div class="sheet-error" style="margin-top:11px">Sworn needs Screen Time to block apps. Turn it on in Settings → Screen Time, then choose your apps here or later under Commitments.</div>` : ''}
         ${!NATIVE && sec === 'apps' ? `
         <div class="tile tile--sub" style="padding:8px;display:flex;flex-direction:column;gap:4px">
           ${B().apps.map((name) => {
@@ -740,7 +756,7 @@ function protectScreen() {
       </div>
 
       <div class="footer-bar">
-        <button class="cta${ready ? '' : ' cta--muted'}" data-act="next" id="protectcta"${ready ? '' : ' disabled'}>Protect these hours</button>
+        <button class="cta${ready ? '' : ' cta--muted'}" data-act="next" id="protectcta"${ready ? '' : ' disabled'}>${blocked ? 'Continue without blocking' : 'Protect these hours'}</button>
       </div>
     </div>`;
 }

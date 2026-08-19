@@ -1133,3 +1133,15 @@ button.tile { cursor: pointer; -webkit-appearance: none; appearance: none; }
 /* The analysis already has one gold element in the score bar. */
 .check-badge--plain { background: rgba(255, 255, 255, .14); }
 .check-badge--plain svg { stroke: var(--ink); }
+
+/* Something the user needs to know before they can go on. */
+.sheet-error {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(214, 84, 74, .12);
+  border: 1px solid rgba(214, 84, 74, .3);
+  font-size: 13px;
+  line-height: 1.45;
+  color: #e88178;
+  text-wrap: pretty;
+}
