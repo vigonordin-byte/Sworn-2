@@ -68,6 +68,7 @@ const S = {
   draft: null,         // the oath being created/edited, or null
   sheetFrom: null,     // tab the oath sheet was opened from
   sheetError: null,    // why a commitment could not be saved
+  confirmBreak: false, // the break button is armed and awaiting confirmation
   sheetSection: null,  // expanded sheet row: null | 'time' | 'until' | 'apps'
   whyOpen: false,
   whyEditing: false,
@@ -1258,7 +1259,16 @@ function oathSheet() {
       `}
 
 
-      ${editing ? '<button type="button" class="oath-break" data-act="oath-break">Break this commitment</button>' : ''}
+      ${!editing ? '' : S.confirmBreak ? `
+      <div class="break-confirm">
+        <div class="break-confirm__ask">Break this commitment?</div>
+        <div class="break-confirm__cost">${S.daysSworn > 0
+          ? `You will lose your streak of ${S.daysSworn} ${S.daysSworn === 1 ? 'day' : 'days'} and start again at day one.`
+          : 'This removes the commitment and the protection it holds.'}</div>
+        <button type="button" class="oath-break" style="margin-top:14px" data-act="oath-break-confirm">Yes, break commitment</button>
+        <button type="button" class="break-confirm__keep" data-act="oath-break-cancel">No, keep my word</button>
+      </div>`
+      : '<button type="button" class="oath-break" data-act="oath-break">Break this commitment</button>'}
 
       ${S.sheetError ? `<div class="sheet-error">${esc(S.sheetError)}</div>` : ''}
       <div class="sheet-hint" id="oathhint"${ready || S.sheetError ? ' hidden' : ''}>Choose at least one app for this to protect.</div>
@@ -1762,6 +1772,7 @@ document.getElementById('phone').addEventListener('click', (e) => {
       if (!o) return;
       S.draft = { ...o, days: [...o.days], apps: [...o.apps] };
       S.sheetSection = null;
+      S.confirmBreak = false;
       S.tab = 'commitments';
       return render();
     }
@@ -1772,11 +1783,13 @@ document.getElementById('phone').addEventListener('click', (e) => {
       S.draft = blankOath();
       S.sheetSection = null;
       S.sheetError = null;
+      S.confirmBreak = false;
       return render();
     case 'sheet-cancel':
       S.tab = S.sheetFrom || S.tab;
       S.sheetFrom = null;
       const abandoned = S.draft && S.draft.isNew;
+      S.confirmBreak = false;
       S.draft = null;
       S.sheetSection = null;
       S.sheetError = null;
@@ -1813,14 +1826,28 @@ document.getElementById('phone').addEventListener('click', (e) => {
       if (isNew) bridge({ action: 'notifyRecommit', prefs: loadNotifPrefs() });
       return render();
     }
-    case 'oath-break': {
+    case 'oath-break':
+      // Never one tap: breaking a commitment costs the streak, and the cost
+      // has to be said before it is paid.
+      S.confirmBreak = true;
+      return render();
+    case 'oath-break-cancel':
+      S.confirmBreak = false;
+      return render();
+    case 'oath-break-confirm': {
       const gone = S.draft.id;
       OATHS = OATHS.filter((o) => o.id !== gone);
       S.draft = null;
       S.sheetSection = null;
       S.sheetFrom = null;
+      S.confirmBreak = false;
       S.tab = 'commitments';
       if (NATIVE) native({ action: 'forget', oathId: gone });
+      /* Abandoning a commitment is breaking your word, so it costs what
+         giving in costs: the streak restarts and it goes in the record. The
+         best run is kept, so nothing earned is erased. */
+      recordLapse('', 'abandoned');
+      S.daysSworn = loadProgress().daysSworn;
       persistOaths();
       return render();
     }

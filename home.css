@@ -1753,3 +1753,37 @@ body { font-family: var(--sf); }
   appearance: none;
 }
 label.tile { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+
+/* Breaking a commitment is the one destructive act in the sheet, so it states
+   what it costs and asks again rather than acting on a single tap. */
+.break-confirm {
+  margin-top: 22px;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(214, 84, 74, .1);
+  border: 1px solid rgba(214, 84, 74, .28);
+  text-align: center;
+}
+.break-confirm__ask { font-size: 15.5px; font-weight: 600; color: #e88178; }
+.break-confirm__cost {
+  margin-top: 7px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: rgba(242, 240, 236, .6);
+  text-wrap: pretty;
+}
+.break-confirm .oath-break { margin-top: 14px; }
+
+.break-confirm__keep {
+  margin-top: 10px;
+  width: 100%;
+  padding: 13px;
+  border: 0;
+  border-radius: 16px;
+  background: none;
+  font-family: var(--sf);
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
