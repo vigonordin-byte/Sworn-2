@@ -1787,3 +1787,13 @@ label.tile { display: flex; align-items: center; justify-content: space-between;
   color: var(--ink);
   cursor: pointer;
 }
+
+/* Said before the button is pressed, not after. */
+.iv__cost {
+  margin-bottom: 14px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(242, 240, 236, .45);
+  text-wrap: pretty;
+}

@@ -819,6 +819,9 @@ function decisionBar() {
   }
   if (S.ivMode === 'bypass') {
     return `
+      <div class="iv__cost">Turning this off breaks your commitment. ${S.daysSworn > 0
+        ? `Your streak of ${S.daysSworn} ${S.daysSworn === 1 ? 'day' : 'days'} restarts.`
+        : 'It goes in your record.'}</div>
       <div class="iv__decision">
         <button type="button" class="iv__primary" data-act="iv-back">Go Back</button>
         <button type="button" class="iv__secondary" data-act="iv-continue">Continue Anyway</button>
@@ -1684,6 +1687,10 @@ function endIntervention() {
 /** They waited it out and still want the protection gone. */
 function completeBypass() {
   pushEvent('protection_bypassed');
+  /* Switching protection off is the third way to break your word, alongside
+     giving in and abandoning a commitment. It cost nothing while the other
+     two cost the streak, which made the quiet exit the cheapest one. */
+  recordLapse('', 'bypass');
   const oath = OATHS.find((o) => o.id === S.ivOathId);
   if (oath) oath.on = false;
   clearInterval(timer);
