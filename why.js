@@ -176,23 +176,69 @@ function loadProgress() {
   const daysSworn = since ? Math.max(1, elapsed + 1) : 0;
   // The longest run ever, which a lapse must not erase — achievements keep it.
   const best = Math.max(typeof p.best === 'number' ? p.best : 0, daysSworn);
-  if (migrated) saveProgress({ since, oathAt, best });
-  return { since, oathAt, best, daysSworn };
+  const unguardedSince = typeof p.unguardedSince === 'number' ? p.unguardedSince : null;
+  if (migrated) saveProgress({ since, oathAt, best, unguardedSince });
+  return { since, oathAt, best, unguardedSince, daysSworn };
 }
 
 function saveProgress(p) {
   const record = {
     since: p.since ?? null,
     oathAt: p.oathAt ?? p.since ?? null,
-    best: typeof p.best === 'number' ? p.best : 0
+    best: typeof p.best === 'number' ? p.best : 0,
+    unguardedSince: typeof p.unguardedSince === 'number' ? p.unguardedSince : null
   };
   try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(record)); } catch (e) { /* blocked */ }
+}
+
+/* A streak counts days of protection kept, so it cannot keep running while
+   nothing is protecting you. Switching everything off starts a short grace
+   period — long enough to rearrange commitments without being punished for
+   it — and when that runs out with nothing active, the streak is over. */
+const UNGUARDED_GRACE_MS = 5 * 60_000;
+
+function hasActiveCommitment() {
+  return (loadOaths() || []).some((o) => o.on);
+}
+
+/** Milliseconds left before an unprotected streak ends, or 0 if not at risk. */
+function graceRemaining() {
+  const p = loadProgress();
+  if (!p.since || !p.unguardedSince || hasActiveCommitment()) return 0;
+  return Math.max(0, UNGUARDED_GRACE_MS - (Date.now() - p.unguardedSince));
+}
+
+/* Called wherever the app draws or commitments change. Cheap, and idempotent:
+   it only writes when the guarded state actually changes. */
+function enforceStreakGuard() {
+  const p = loadProgress();
+  const active = hasActiveCommitment();
+
+  if (active) {
+    // Protected again: clear any grace, and begin a streak if none is running.
+    if (p.unguardedSince) saveProgress({ ...p, unguardedSince: null });
+    if (!p.since) { startStreak(); return 'started'; }
+    return null;
+  }
+
+  if (!p.since) return null;                  // no streak left to lose
+  if (!p.unguardedSince) {
+    saveProgress({ ...p, unguardedSince: Date.now() });
+    return null;
+  }
+  if (Date.now() - p.unguardedSince > UNGUARDED_GRACE_MS) {
+    // The grace is spent and nothing is protected. The streak is done.
+    saveProgress({ since: null, oathAt: p.oathAt, best: p.best, unguardedSince: p.unguardedSince });
+    pushProfile();
+    return 'voided';
+  }
+  return null;
 }
 
 /** The commitment moment. Starts (or restarts) the streak; keeps the oath date. */
 function startStreak() {
   const p = loadProgress();
-  saveProgress({ since: Date.now(), oathAt: p.oathAt || Date.now(), best: p.best });
+  saveProgress({ since: Date.now(), oathAt: p.oathAt || Date.now(), best: p.best, unguardedSince: null });
   pushProfile();
 }
 
@@ -604,7 +650,11 @@ function hardestWindow() {
 
 function analyticsStats() {
   const p = loadProgress();
-  if (!p.since) return { hasData: false };
+  /* Keyed off the date of the first commitment, not the current streak.
+     Losing a streak ends the streak; it does not unmake the weeks that
+     actually happened, and wiping the record would be the app lying by
+     omission. */
+  if (!p.oathAt) return { hasData: false };
   const u = loadUrge();
 
   /* Every day since the commitment was made. */

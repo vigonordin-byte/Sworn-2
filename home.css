@@ -1797,3 +1797,17 @@ label.tile { display: flex; align-items: center; justify-content: space-between;
   color: rgba(242, 240, 236, .45);
   text-wrap: pretty;
 }
+
+/* Said while there is still time to act on it. */
+.streak-risk {
+  margin: 14px 20px 0;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(214, 84, 74, .12);
+  border: 1px solid rgba(214, 84, 74, .3);
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #e88178;
+  text-wrap: pretty;
+}

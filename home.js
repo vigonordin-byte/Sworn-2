@@ -403,6 +403,7 @@ function oathPayload() {
 }
 
 function syncShields() {
+  enforceStreakGuard();
   /* A running urge shield covers the union of every selection. Once the last
      one is gone it protects nothing, so it must not keep claiming to — the
      native side lowers it on the same condition. */
@@ -529,6 +530,12 @@ function homeTab() {
       </div>
 
       <div class="vow">“${esc(whyText())}”</div>
+      ${(() => {
+        const left = graceRemaining();
+        if (!left) return '';
+        const mins = Math.max(1, Math.ceil(left / 60000));
+        return `<div class="streak-risk">Nothing is protected. Your streak ends in ${mins} ${mins === 1 ? 'minute' : 'minutes'} unless you set protection.</div>`;
+      })()}
 
       ${protectionCard()}
 
@@ -1599,6 +1606,12 @@ function screenHtml() {
 }
 
 function render() {
+  /* A streak cannot outlive the protection it measures, so this is checked
+     wherever the app draws, not only when commitments change. When it does
+     change the streak, the notification schedule is rebuilt too — milestones
+     were scheduled ahead from the streak start, and a dead streak must not
+     keep firing them. */
+  if (enforceStreakGuard()) syncNotifications(oathPayload());
   // Recomputed every paint: iOS keeps the page alive for days, and a counter
   // cached at load would quietly fall behind the calendar.
   S.daysSworn = loadProgress().daysSworn;
