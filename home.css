@@ -1771,6 +1771,20 @@ label.tile { display: flex; align-items: center; justify-content: space-between;
 }
 .break-confirm .oath-break { margin-top: 14px; }
 
+/* Lowering the urge shield is not a lapse. It borrows the confirm's shape so
+   the weight is obvious, but drops the red: colouring it like a broken
+   commitment would tell the user that asking for cover was the mistake. */
+.break-confirm--calm {
+  background: rgba(255, 255, 255, .045);
+  border-color: rgba(255, 255, 255, .12);
+}
+.break-confirm--calm .break-confirm__ask { color: var(--ink); }
+.break-confirm--calm .oath-break {
+  background: rgba(255, 255, 255, .075);
+  border-color: rgba(255, 255, 255, .16);
+  color: var(--ink);
+}
+
 .break-confirm__keep {
   margin-top: 10px;
   width: 100%;

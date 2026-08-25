@@ -427,7 +427,7 @@ function protectionCard() {
     const total = URGE_MINUTES * 60_000;
     const pct = Math.max(2, Math.round((left / total) * 100));
     return `
-      <button type="button" class="card prot" data-act="tab" data-tab="commitments">
+      <button type="button" class="card prot" data-act="urge-card">
         <span style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
           <span style="display:block">
             <span class="prot__on"><i></i>PROTECTED · URGE</span>
@@ -442,7 +442,14 @@ function protectionCard() {
           </span>
         </span>
         <span class="prot__track" style="display:block"><i style="width:${pct}%"></i></span>
-      </button>`;
+      </button>
+      ${S.confirmUrge ? `
+      <div class="break-confirm break-confirm--calm">
+        <div class="break-confirm__ask">End this protection early?</div>
+        <div class="break-confirm__cost">You asked for this cover when the urge came, and ${minutesLabel(left)} of it is left. Your commitments stay on and your streak is not affected.</div>
+        <button type="button" class="oath-break" style="margin-top:14px" data-act="urge-end">Yes, end it now</button>
+        <button type="button" class="break-confirm__keep" data-act="urge-keep">No, leave it up</button>
+      </div>` : ''}`;
   }
 
   /* Green means blocking right now, and nothing else. A commitment that has
@@ -1653,6 +1660,7 @@ function paintCount() {
    not depend on the user sitting through anything. */
 function tapTempted() {
   if (!anythingShielded()) return;
+  S.confirmUrge = false;
   clearInterval(timer);
   S.tab = 'home';
   beginUrge(URGE_MINUTES);
@@ -1723,9 +1731,27 @@ document.getElementById('phone').addEventListener('click', (e) => {
       if (S.view !== 'home') { clearInterval(timer); S.view = 'home'; }
       S.confirmReplay = false;
       S.confirmLift = false;
+      S.confirmUrge = false;
       S.tab = el.dataset.tab;
       return render();
     case 'tempted': return tapTempted();
+    /* The hour raised by "I'm tempted" had no visible way out: the card led to
+       the Commitments tab, which knows nothing about it. Only Settings could
+       lift it, which is not where anyone looks. It asks rather than acting on
+       one tap, and costs nothing — the shield is cover the user requested, not
+       a promise they made, and charging a streak for lowering it would make
+       the one button that asks for help the most dangerous in the app. */
+    case 'urge-card':
+      S.confirmUrge = !S.confirmUrge;
+      return render();
+    case 'urge-keep':
+      S.confirmUrge = false;
+      return render();
+    case 'urge-end':
+      S.confirmUrge = false;
+      endUrge();
+      if (NATIVE) native({ action: 'urgeClear' });
+      return render();
     case 'pause': return startIntervention('voluntary');
     case 'iv-back':
       // Walking away from a voluntary intervention is the resist worth
