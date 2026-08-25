@@ -500,7 +500,6 @@ function homeTab() {
 
   return `
     <div class="scroll" style="top:var(--safe-top);bottom:var(--nav-h);padding:0">
-      <div class="scroll__breathe">
       <div class="apphead">
         <div class="apphead__mark${USER.name ? ' apphead__mark--greet' : ''}">${esc(greeting())}</div>
         <button type="button" class="icon-btn" style="width:40px;height:40px" data-act="achievements-open" aria-label="Achievements">
@@ -565,7 +564,6 @@ function homeTab() {
       </div>`;
       })()}
       <div style="height:12px"></div>
-      </div>
     </div>`;
 }
 
@@ -1004,7 +1002,6 @@ function analyticsTab() {
 
 
     <div class="scroll" style="top:calc(96px + var(--safe-top));bottom:var(--nav-h);padding:14px 20px 24px">
-      <div class="scroll__breathe">
 
       ${card(1, 'Commitment rate', `${STATS.rate}<small>%</small>`,
         STATS.rateDelta === null ? '' : `<span style="font-size:12px;font-weight:600;color:${STATS.rateDelta >= 0 ? 'var(--green-tx)' : '#e88178'}">${STATS.rateDelta >= 0 ? '+' : ''}${STATS.rateDelta}</span>`,
@@ -1023,7 +1020,6 @@ function analyticsTab() {
            <span style="width:${100 - resistedPct}%;background:rgba(255,255,255,.18)"></span>
          </span>`)}
 
-      </div>
     </div>`;
 }
 

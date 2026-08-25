@@ -1565,9 +1565,6 @@ body { font-family: var(--sf); }
 
 .cta-gold--muted { opacity: .45; cursor: default; }
 
-/* The home tab fits on one screen, but a scroller that cannot move at all
-   feels frozen. One extra pixel keeps the native rubber-band alive. */
-.scroll__breathe { min-height: calc(100% + 1px); }
 
 /* ---------------------------------------------------------------- word reveal */
 
@@ -1810,4 +1807,23 @@ label.tile { display: flex; align-items: center; justify-content: space-between;
   line-height: 1.45;
   color: #e88178;
   text-wrap: pretty;
+}
+
+/* Every scrolling surface stays fractionally taller than its container.
+
+   A pane whose content happens to fit exactly cannot move at all, and on iOS
+   that reads as frozen rather than complete. Home and Analytics each got a
+   wrapper for this; doing it here instead covers every tab and sub-page, and
+   means a new one cannot be added without it. The pseudo-element sits one
+   pixel past the bottom, so the rubber-band always engages and there is
+   nothing extra to see. */
+.scroll::after,
+.page__body::after {
+  content: '';
+  position: absolute;
+  top: calc(100% + 1px);
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
 }
