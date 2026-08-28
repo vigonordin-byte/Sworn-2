@@ -1550,6 +1550,31 @@ function devPage() {
           })()}
         </div>
 
+        ${(() => {
+          const shot = SwornDev.shotPrefs();
+          return `
+        <div class="group-label" style="margin:26px 0 0">SCREENSHOTS</div>
+        <div class="group" style="margin:12px 0 0;padding:14px">
+          <div class="dev-note" style="margin:0 0 12px">Stages a state worth photographing. Wipes local data, keeps your picked apps.</div>
+          <div class="dev-note" style="margin:0 0 8px">Name</div>
+          <div class="dev-chips">
+            ${SwornDev.SHOT_NAMES.map((n) => `
+              <button type="button" class="dev-chip${on(shot.name === n)}" data-act="dev-shot-name" data-name="${esc(n)}">${esc(n)}</button>`).join('')}
+          </div>
+          <div class="dev-note" style="margin:16px 0 8px">Streak</div>
+          <div class="dev-chips">
+            ${SwornDev.SHOT_DAYS.map((d) => `
+              <button type="button" class="dev-chip${on(shot.days === d)}" data-act="dev-shot-days" data-days="${d}">${d}d</button>`).join('')}
+          </div>
+          <div class="dev-note" style="margin:16px 0 8px">Home card</div>
+          <div class="dev-chips">
+            <button type="button" class="dev-chip${on(shot.blocking)}" data-act="dev-shot-blocking" data-on="1">Blocking now</button>
+            <button type="button" class="dev-chip${on(!shot.blocking)}" data-act="dev-shot-blocking" data-on="">Scheduled</button>
+          </div>
+          <button type="button" class="dev-chip" style="width:100%;margin-top:16px" data-act="dev-shot-go">Stage it</button>
+        </div>`;
+        })()}
+
         <div class="group-label" style="margin:26px 0 0">TEST BEHAVIOR</div>
         <div class="group" style="margin:12px 0 0;padding:14px">
           <div class="dev-note" style="margin:0 0 12px">Switches every adaptive screen without redoing onboarding.${SwornDev.chosen() ? '' : ' Not yet answered, defaulting.'}</div>
@@ -1948,6 +1973,10 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'dev-notif-list': return SwornDev.listNotifs();
     case 'dev-notif-clear': return SwornDev.clearNotifs();
     case 'dev-behavior': return SwornDev.setBehavior(el.dataset.id);
+    case 'dev-shot-name': SwornDev.setShot({ name: el.dataset.name }); return render();
+    case 'dev-shot-days': SwornDev.setShot({ days: Number(el.dataset.days) }); return render();
+    case 'dev-shot-blocking': SwornDev.setShot({ blocking: !!el.dataset.on }); return render();
+    case 'dev-shot-go': return SwornDev.stageShots();
     case 'dev-duration': SwornDev.setDuration(Number(el.dataset.secs)); return render();
     case 'dev-stage':
       S.devOpen = false;

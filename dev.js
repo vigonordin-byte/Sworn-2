@@ -248,6 +248,90 @@ window.SwornDev = (() => {
     S.interventionSeconds = v;
   }
 
+  /* App Store screenshots need a state nobody arrives at by using the app for
+     an afternoon: a long streak, a name that is not the developer's, windows
+     with round numbers on them, and a record with something in it. Shooting
+     whatever the app happened to be showing produced a store page whose
+     headline promise was answered by "1 DAY FREE". */
+  const SHOT_KEY = 'sworn.dev.shot';
+  const SHOT_NAMES = ['James', 'Daniel', 'Marcus', 'Elias'];
+  const SHOT_DAYS = [1, 7, 21, 30, 90];
+  const SHOT_FALLBACK = { name: 'James', days: 30, blocking: true };
+
+  function shotPrefs() {
+    try { return { ...SHOT_FALLBACK, ...JSON.parse(localStorage.getItem(SHOT_KEY) || '{}') }; }
+    catch (e) { return { ...SHOT_FALLBACK }; }
+  }
+
+  function setShot(patch) {
+    const next = { ...shotPrefs(), ...patch };
+    try { localStorage.setItem(SHOT_KEY, JSON.stringify(next)); } catch (e) { /* blocked */ }
+    return next;
+  }
+
+  /* A window that contains right now, on whole hours. Without this the only
+     way to photograph a green "PROTECTED NOW" card was to catch a real one,
+     and the times came out as 11:47 - 12:46: true, but it reads as an
+     accident rather than as something a person decided. */
+  function liveWindow() {
+    const h = new Date().getHours();
+    const pad = (n) => String(Math.max(0, Math.min(23, n))).padStart(2, '0') + ':00';
+    return [pad(h - 2), pad(h + 2)];
+  }
+
+  function stageShots() {
+    const { name, days, blocking } = shotPrefs();
+    clearWeb();
+    // Seeds the urge log and resists, so "Urges resisted" is not 0 of 1 and
+    // "Hardest times" has bars. Its reasons exclude the faith one, so no
+    // scripture appears in a screenshot bound for App Store metadata.
+    seedCommitment();
+
+    const day = 864e5;
+    const now = Date.now();
+    saveSession({ name, greeted: true });
+
+    /* The record runs from the first commitment, the streak from the last
+       restart — which is what lets this be an honest history rather than a
+       flawless one. Committed a month before the current run, slipped twice
+       early, clean since. A page showing 100% would tell the people this app
+       is for that it was never meant for them; the analytics say "kept on 58
+       of 60 days", which is both better copy and true of the seeded data. */
+    saveProgress({ since: now - (days - 1) * day, oathAt: now - (days + 30) * day });
+
+    /* Real clock hours on real past days. seedCommitment's helper is relative
+       to now, so "Hardest times" came out as whatever was a few hours ago —
+       a store page whose Late night commitment sat beside a chart claiming
+       the danger hour was 7am. These land where the urges actually are. */
+    const at = (daysAgo, hour, min) => {
+      const d = new Date(now - daysAgo * day);
+      d.setHours(hour, min || 0, 0, 0);
+      return d.getTime();
+    };
+    const u = loadUrge();
+    u.log = [at(2, 22, 40), at(5, 23, 10), at(9, 22, 15), at(14, 21, 50), at(21, 23, 30)];
+    u.resists = [at(1, 22, 20), at(3, 21, 45), at(6, 23, 5), at(11, 22, 50), at(17, 22, 10), at(25, 21, 35)];
+    u.lapses = [
+      { at: at(days + 18, 23, 20), note: '', reason: 'urge' },
+      { at: at(days + 5, 22, 40), note: '', reason: 'late' }
+    ];
+    saveUrge(u);
+
+    const [from, to] = liveWindow();
+    const apps = ['Reddit', 'X', 'Safari'];
+    saveOaths([
+      { id: 1, name: 'Late night', time: '21:00', until: '00:00',
+        days: [0, 1, 2, 3, 4, 5, 6], apps, on: true },
+      { id: 2, name: 'Home alone', time: blocking ? from : '16:00', until: blocking ? to : '17:00',
+        days: [0, 1, 2, 3, 4, 5, 6], apps, on: true }
+    ]);
+
+    native({ action: 'devOnboarded', value: true });
+    // Keeps ?debug=1 so the panel is still there for the next shot. On device
+    // the flag comes from the host and the query string is empty anyway.
+    window.location.href = 'home.html' + location.search;
+  }
+
   const STAGES = [
     ['Interrupt', 55],
     ['Remember', 40],
@@ -269,6 +353,7 @@ window.SwornDev = (() => {
   }
 
   return { STATES, apply, runPending, duration, setDuration, DURATIONS, STAGES, jumpTo,
+           SHOT_NAMES, SHOT_DAYS, shotPrefs, setShot, stageShots,
            NOTIF_KINDS, fireNotif, listNotifs, setScheduled, getScheduled, clearNotifs,
            BEHAVIOR_STATES, setBehavior, current: loadBehavior, chosen: behaviorChosen };
 })();
