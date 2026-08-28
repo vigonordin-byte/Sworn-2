@@ -1456,7 +1456,7 @@ const DOCS = {
     <p>Sworn blocks apps using Apple's Screen Time. Two things have to be true: you granted Screen Time access when asked, and the commitment has apps chosen and is switched on. You can check both under Commitments.</p>
     <p>If you denied Screen Time access, iOS will not ask again. Turn it back on in Settings → Screen Time.</p>
     <h3>I want my data removed</h3>
-    <p>Everything Sworn knows is on your device. Deleting the app deletes it. There is nothing on a server for us to remove.</p>
+    <p>Open Settings → Account → Delete account. That erases your record from this phone and from our server, lifts any blocking, and cannot be undone. Deleting the app alone removes the copy on your phone but leaves the account.</p>
   `],
 
   terms: ['TERMS OF SERVICE', `
@@ -1484,13 +1484,13 @@ const DOCS = {
     <h3>Which apps you block</h3>
     <p>Apps are chosen through Apple's own picker. Apple hands Sworn an opaque token, not a name. Sworn can count how many apps you protect, and genuinely cannot tell which they are.</p>
     <h3>Sign in with Apple</h3>
-    <p>We receive an identifier for your account, and your first name if you choose to share it. Apple lets you hide your email; if you do, we never see the real one. The name is stored on your device so the app can greet you.</p>
+    <p>We receive an identifier for your account, and your first name if you choose to share it. We never ask for your email address at all. The name is stored on your device and on our server so the app can greet you on a new phone.</p>
     <h3>Payments</h3>
     <p>Subscriptions are handled entirely by Apple. We never see your card.</p>
     <h3>What we do not do</h3>
     <p>No advertising. No analytics SDKs. No selling or sharing of anything. No profile built about you.</p>
     <h3>Deleting it</h3>
-    <p>Delete the app and the data goes with it. To sever the Apple sign-in, use Settings → Apple ID → Sign in with Apple.</p>
+    <p>Settings → Account → Delete account removes everything, on the phone and on our server, and cannot be undone. Deleting the app on its own clears the phone but leaves the account behind. To sever the Apple sign-in as well, use iOS Settings → Apple ID → Sign in with Apple.</p>
   `]
 };
 
