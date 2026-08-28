@@ -165,9 +165,11 @@ enum Shared {
         defaults.array(forKey: "days.\(oathId)") as? [Int] ?? Array(0...6)
     }
 
-    #if DEBUG
-    /// Developer reset: every key this app owns, plus any shield left standing.
-    static func wipeAll() {
+    /// Every key this app owns, plus any shield left standing. Account
+    /// deletion needs this in shipped builds too, so it is no longer behind
+    /// DEBUG: a delete that left the picked apps blocked would be the worst
+    /// possible way to honour the request.
+    static func eraseAll() {
         // Clear the shields BEFORE the keys that identify them.
         clearAllShields()
         for key in defaults.dictionaryRepresentation().keys
@@ -177,6 +179,10 @@ enum Shared {
             defaults.removeObject(forKey: key)
         }
     }
+
+    #if DEBUG
+    /// Developer reset. Same thing, kept under its old name.
+    static func wipeAll() { eraseAll() }
     #endif
 
     static func forget(oathId: Int) {

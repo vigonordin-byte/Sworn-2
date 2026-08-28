@@ -149,6 +149,34 @@ final class SyncEngine {
             .forEach(defaults.removeObject(forKey:))
     }
 
+    /* Guideline 5.1.1(v): an app that creates accounts must be able to delete
+       one from inside the app. Nothing here can reach auth.users directly —
+       that needs the service_role key, which must never exist in a shipped
+       binary — so the row is removed by a SECURITY DEFINER function that can
+       only ever act on the caller's own id. See supabase/delete_account.sql.
+
+       The local session is cleared whichever way the call goes. A device left
+       signed in against an account that no longer exists is a worse state
+       than a failed delete, and the caller erases the device either way. */
+    @discardableResult
+    func deleteAccount() async -> Bool {
+        guard signedIn else { signOut(); return true }
+        await refreshIfNeeded()
+
+        var request = URLRequest(url: SupabaseConfig.url
+            .appendingPathComponent("rest/v1/rpc/delete_own_account"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(SupabaseConfig.anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(Keychain.get(Key.access) ?? "")", forHTTPHeaderField: "Authorization")
+        request.httpBody = Data("{}".utf8)
+
+        let status = (try? await URLSession.shared.data(for: request))
+            .flatMap { ($0.1 as? HTTPURLResponse)?.statusCode } ?? 0
+        signOut()
+        return (200...299).contains(status)
+    }
+
     // MARK: intake (called from the bridge; never blocks, never throws)
 
     /// Latest profile snapshot from the web layer. Stored, then pushed.

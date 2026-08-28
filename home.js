@@ -1405,7 +1405,16 @@ function accountPage() {
       </div>
     </div>
     <div class="doc-note">Sworn stores your commitment on this device. Signing out leaves it in place.</div>
-    <button type="button" class="oath-break" data-act="sign-out">Sign out</button>`);
+    <button type="button" class="oath-break" data-act="sign-out">Sign out</button>
+
+    ${S.confirmDelete ? `
+    <div class="break-confirm" style="margin-top:26px">
+      <div class="break-confirm__ask">Delete your account?</div>
+      <div class="break-confirm__cost">Your streak, your record, your reason and every commitment are erased from this phone and from Sworn's servers. Blocking is lifted. This cannot be undone and there is nothing left to restore.</div>
+      <button type="button" class="oath-break" style="margin-top:14px" data-act="delete-account-confirm">Yes, delete everything</button>
+      <button type="button" class="break-confirm__keep" data-act="delete-account-cancel">Keep my account</button>
+    </div>`
+    : `<button type="button" class="oath-break" style="margin-top:12px" data-act="delete-account">Delete account</button>`}`);
 }
 
 /* Deliberately a handful of switches, not thirty. Each one is a reason Sworn
@@ -1757,6 +1766,7 @@ document.getElementById('phone').addEventListener('click', (e) => {
       S.confirmReplay = false;
       S.confirmLift = false;
       S.confirmUrge = false;
+      S.confirmDelete = false;
       S.tab = el.dataset.tab;
       return render();
     case 'tempted': return tapTempted();
@@ -1941,7 +1951,7 @@ document.getElementById('phone').addEventListener('click', (e) => {
     }
     case 'day': toggle(S.draft.days, i); return render();
     case 'app': toggle(S.draft.apps, el.dataset.app); return render();
-    case 'page-close': S.page = null; return render();
+    case 'page-close': S.page = null; S.confirmDelete = false; return render();
     case 'account': S.page = 'account'; return render();
     case 'notifications-open': S.page = 'notifications'; return render();
     case 'notif-toggle': {
@@ -1959,6 +1969,21 @@ document.getElementById('phone').addEventListener('click', (e) => {
     case 'review': return native({ action: 'review' });
     case 'subscription': return native({ action: 'manageSubscription' });
     case 'sign-out': S.page = null; return native({ action: 'signOut' });
+    /* Guideline 5.1.1(v). Irreversible and total, so it states the whole cost
+       first and takes two taps — the same shape as breaking a commitment,
+       because it is the larger version of the same act. */
+    case 'delete-account': S.confirmDelete = true; return render();
+    case 'delete-account-cancel': S.confirmDelete = false; return render();
+    case 'delete-account-confirm': {
+      S.confirmDelete = false;
+      if (NATIVE) { S.page = null; return native({ action: 'deleteAccount' }); }
+      // In a browser there is no host and no server session; local is all of it.
+      ['sworn.why', 'sworn.oaths', 'sworn.protect', 'sworn.urge', 'sworn.session',
+       'sworn.progress', 'sworn.stats', 'sworn.onboarded']
+        .forEach((k) => { try { localStorage.removeItem(k); } catch (e) { /* blocked */ } });
+      window.location.href = 'index.html';
+      return;
+    }
     case 'apps-under-oath': {
       const target = OATHS.find((o) => o.on) || OATHS[0];
       if (!target) { S.tab = 'commitments'; return render(); }

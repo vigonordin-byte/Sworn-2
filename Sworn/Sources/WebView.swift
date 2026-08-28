@@ -237,6 +237,17 @@ struct WebView: UIViewRepresentable {
                 case "signOut":
                     self.onSignOut?()
 
+                case "deleteAccount":
+                    /* Order matters. The server call goes first, while the
+                       session it needs is still on the device; then blocking
+                       comes down, then the keys that identify the shields,
+                       then the app returns to screen one. Erasing first would
+                       take the credentials with it and strand the row. */
+                    await SyncEngine.shared.deleteAccount()
+                    self.screenTime.liftAllBlocking()
+                    Shared.eraseAll()
+                    self.app.replayOnboarding()
+
                 case "forget":
                     if let id = body["oathId"] as? Int { self.screenTime.forget(oathId: id) }
 
